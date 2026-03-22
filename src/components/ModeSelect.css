@@ -179,3 +179,17 @@
   border-color: rgba(34, 211, 238, 0.65);
   box-shadow: 0 8px 30px rgba(34, 211, 238, 0.18);
 }
+
+/* Quest mode */
+.quest-card-btn {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.08);
+}
+
+.quest-card-btn p    { color: #94a3b8; }
+.quest-card-btn .mode-cta { color: #f59e0b; }
+
+.quest-card-btn:hover {
+  border-color: rgba(245, 158, 11, 0.65);
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.2);
+}

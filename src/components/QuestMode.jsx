@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import lessons from '../data/lessons.json';
-import './SocraticMode.css';
+import './QuestMode.css';
 
 const TOPIC_COLORS = {
-  'BGP':              '#e74c3c',
-  'OSPF':             '#2980b9',
-  'DMVPN':            '#e67e22',
-  'MPLS':             '#27ae60',
-  'QoS':              '#8e44ad',
-  'Cisco Nexus':      '#c0392b',
-  'Versa SD-WAN':     '#1a5276',
-  'SOX ITGC':         '#16a085',
-  'PCI DSS':          '#6c3483',
+  'BGP':              '#b45309',
+  'OSPF':             '#92400e',
+  'DMVPN':            '#a16207',
+  'MPLS':             '#854d0e',
+  'QoS':              '#78350f',
+  'Cisco Nexus':      '#9a3412',
+  'Versa SD-WAN':     '#7c2d12',
+  'SOX ITGC':         '#713f12',
+  'PCI DSS':          '#831843',
 };
 
 const ALL_TOPICS = [...new Set(lessons.map(l => l.topic))];
@@ -29,13 +29,10 @@ const INJECTION_PATTERNS = [
   /do\s+anything\s+now/i,
   /jailbreak/i,
   /bypass\s+(your|the|all)\s+(rules|filters|restrictions|limitations|guidelines)/i,
-  /enter\s+.{0,20}mode/i,
-  /switch\s+(to|into)\s+.{0,20}mode/i,
   /from\s+now\s+on/i,
   /for\s+the\s+rest\s+of\s+(this|our)\s+(conversation|chat|session)/i,
   /respond\s+(only\s+)?(in|with|as)/i,
   /\brole\s*play/i,
-  /stop\s+being\s+(a\s+)?socratic/i,
   /you\s+must\s+obey/i,
   /I\s+command\s+you/i,
 ];
@@ -45,8 +42,8 @@ function detectInjection(text) {
 }
 
 const MAX_STRIKES = 2;
-const LOCKOUT_KEY = 'socratic_lockout';
-const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_KEY = 'quest_lockout';
+const LOCKOUT_DURATION = 15 * 60 * 1000;
 
 function isLockedOut() {
   try {
@@ -63,9 +60,9 @@ function setLockout() {
   localStorage.setItem(LOCKOUT_KEY, JSON.stringify(Date.now() + LOCKOUT_DURATION));
 }
 
-const SESSION_PREFIX = 'socratic_session_';
-const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
-const SESSION_MAX_MESSAGES = 36; // leave room for next exchange under MAX_HISTORY_LENGTH
+const SESSION_PREFIX = 'quest_session_';
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+const SESSION_MAX_MESSAGES = 36;
 
 function getSessionKey(t) {
   return SESSION_PREFIX + t.toLowerCase().replace(/\s+/g, '_');
@@ -75,7 +72,7 @@ function saveSession(t, msgs) {
   try {
     const trimmed = msgs.slice(-SESSION_MAX_MESSAGES);
     localStorage.setItem(getSessionKey(t), JSON.stringify({ messages: trimmed, savedAt: Date.now() }));
-  } catch { /* storage full — degrade gracefully */ }
+  } catch { /* storage full */ }
 }
 
 function loadSession(t) {
@@ -105,7 +102,19 @@ function hasSession(t) {
   } catch { return false; }
 }
 
-export default function SocraticMode({ onExit }) {
+// Parse stats from the DM's stat line: **[HP: X/20 | Level: Y | XP: Z]**
+function parseStats(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role !== 'assistant') continue;
+    const match = messages[i].content.match(/\[HP:\s*(\d+)\/20\s*\|\s*Level:\s*(\d+)\s*\|\s*XP:\s*(\d+)\]/);
+    if (match) {
+      return { hp: parseInt(match[1]), level: parseInt(match[2]), xp: parseInt(match[3]) };
+    }
+  }
+  return { hp: 20, level: 1, xp: 0 };
+}
+
+export default function QuestMode({ onExit }) {
   const [topic, setTopic] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -117,26 +126,20 @@ export default function SocraticMode({ onExit }) {
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Check lockout on mount
   useEffect(() => {
-    if (isLockedOut()) {
-      setTerminated(true);
-    }
+    if (isLockedOut()) setTerminated(true);
   }, []);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streaming]);
 
-  // Auto-save session after streaming completes
   useEffect(() => {
     if (!streaming && topic && messages.length > 0) {
       saveSession(topic, messages);
     }
   }, [streaming, messages, topic]);
 
-  // Check for saved session when topic is selected
   useEffect(() => {
     if (!topic) return;
     const saved = loadSession(topic);
@@ -148,13 +151,14 @@ export default function SocraticMode({ onExit }) {
     }
   }, [topic]);
 
+  const stats = parseStats(messages);
+  const hpPercent = Math.max(0, (stats.hp / 20) * 100);
+  const hpColor = stats.hp > 10 ? '#22c55e' : stats.hp > 5 ? '#f59e0b' : '#ef4444';
+
   async function askAI(history, selectedTopic) {
     const currentTopic = selectedTopic || topic;
-
     setStreaming(true);
     setError(null);
-
-    // Add empty assistant message to stream into
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
     try {
@@ -164,6 +168,7 @@ export default function SocraticMode({ onExit }) {
         body: JSON.stringify({
           topic: currentTopic,
           history,
+          mode: 'quest',
         }),
       });
 
@@ -183,7 +188,7 @@ export default function SocraticMode({ onExit }) {
           }
           setMessages(prev => {
             const updated = [...prev];
-            updated[updated.length - 1] = { role: 'assistant', content: `${errData.message}\n\nStrike ${strikesRef.current} of ${MAX_STRIKES}. One more and this session ends.` };
+            updated[updated.length - 1] = { role: 'assistant', content: `${errData.message}\n\nStrike ${strikesRef.current} of ${MAX_STRIKES}. One more and this quest ends.` };
             return updated;
           });
           return;
@@ -199,7 +204,6 @@ export default function SocraticMode({ onExit }) {
         throw new Error(errData.error || `Server error (${response.status})`);
       }
 
-      // Read the SSE stream
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let full = '';
@@ -208,16 +212,14 @@ export default function SocraticMode({ onExit }) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete line in buffer
+        buffer = lines.pop();
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const payload = line.slice(6);
           if (payload === '[DONE]') break;
-
           try {
             const { text, error: streamErr } = JSON.parse(payload);
             if (streamErr) throw new Error(streamErr);
@@ -236,7 +238,7 @@ export default function SocraticMode({ onExit }) {
       }
     } catch (err) {
       setError(err.message || 'Something went wrong.');
-      setMessages(prev => prev.slice(0, -1)); // remove empty bubble
+      setMessages(prev => prev.slice(0, -1));
     } finally {
       setStreaming(false);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -245,15 +247,9 @@ export default function SocraticMode({ onExit }) {
 
   async function handleSend() {
     if (!input.trim() || streaming) return;
-
     let sanitized = input.trim();
+    if (sanitized.length > MAX_INPUT_LENGTH) sanitized = sanitized.slice(0, MAX_INPUT_LENGTH);
 
-    // Length cap
-    if (sanitized.length > MAX_INPUT_LENGTH) {
-      sanitized = sanitized.slice(0, MAX_INPUT_LENGTH);
-    }
-
-    // Client-side injection detection (first line of defense — server also checks)
     if (detectInjection(sanitized)) {
       strikesRef.current += 1;
       if (strikesRef.current >= MAX_STRIKES) {
@@ -262,7 +258,7 @@ export default function SocraticMode({ onExit }) {
         return;
       }
       const blocked = { role: 'user', content: sanitized };
-      const refusal = { role: 'assistant', content: `That looks like an attempt to change my instructions. I'm your Socratic tutor for ${topic} — nothing else. This is strike ${strikesRef.current} of ${MAX_STRIKES}. One more and this session ends.\n\nBack to ${topic}:` };
+      const refusal = { role: 'assistant', content: `The dungeon rejects your words. That is strike ${strikesRef.current} of ${MAX_STRIKES}. One more and this quest ends permanently.\n\nThe path forward lies in ${topic}. What do you do?` };
       setMessages(prev => [...prev, blocked, refusal]);
       setInput('');
       return;
@@ -270,16 +266,9 @@ export default function SocraticMode({ onExit }) {
 
     const userMessage = { role: 'user', content: sanitized };
     const updatedHistory = [...messages, userMessage];
-
     setMessages(updatedHistory);
     setInput('');
-
-    const apiHistory = updatedHistory.map(m => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    await askAI(apiHistory, topic);
+    await askAI(updatedHistory.map(m => ({ role: m.role, content: m.content })), topic);
   }
 
   function handleKeyDown(e) {
@@ -298,15 +287,15 @@ export default function SocraticMode({ onExit }) {
   // -- Session terminated --
   if (terminated) {
     return (
-      <div className="socratic-select">
-        <div className="socratic-select-header">
-          <h1 className="socratic-title" style={{ color: '#ef4444' }}>Session Terminated</h1>
-          <span className="socratic-subtitle">
-            Socratic Mode has been locked due to repeated policy violations. Try again later.
+      <div className="quest-select">
+        <div className="quest-select-header">
+          <h1 className="quest-title" style={{ color: '#ef4444' }}>Quest Abandoned</h1>
+          <span className="quest-subtitle">
+            The dungeon has sealed its gates. Repeated violations have ended your quest. Try again later.
           </span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
-          <button className="socratic-exit-btn" onClick={onExit} style={{ fontSize: '1.1rem', padding: '0.75rem 2rem' }}>
+          <button className="quest-exit-btn" onClick={onExit} style={{ fontSize: '1.1rem', padding: '0.75rem 2rem' }}>
             &larr; Back to Menu
           </button>
         </div>
@@ -316,34 +305,38 @@ export default function SocraticMode({ onExit }) {
 
   // -- Resume prompt --
   if (pendingResume) {
-    const accentColor = TOPIC_COLORS[topic] || '#8b5cf6';
+    const accentColor = TOPIC_COLORS[topic] || '#b45309';
+    const savedStats = parseStats(pendingResume);
     return (
-      <div className="socratic-select">
-        <div className="socratic-select-header">
-          <h1 className="socratic-title">Continue Session?</h1>
-          <span className="socratic-subtitle">
-            You have a previous session on <strong style={{ color: accentColor }}>{topic}</strong> ({pendingResume.length} messages).
+      <div className="quest-select">
+        <div className="quest-select-header">
+          <h1 className="quest-title">Continue Quest?</h1>
+          <span className="quest-subtitle">
+            You have a quest in progress: <strong style={{ color: accentColor }}>{topic}</strong>
+          </span>
+          <span className="quest-subtitle" style={{ marginTop: '4px' }}>
+            HP: {savedStats.hp}/20 | Level: {savedStats.level} | XP: {savedStats.xp}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem', flexWrap: 'wrap' }}>
           <button
-            className="socratic-topic-btn"
-            style={{ '--accent': accentColor, minWidth: '160px' }}
+            className="quest-topic-btn"
+            style={{ '--accent': accentColor, minWidth: '160px', justifyContent: 'center' }}
             onClick={() => { setMessages(pendingResume); setPendingResume(null); }}
           >
-            Continue
+            Continue Quest
           </button>
           <button
-            className="socratic-topic-btn"
-            style={{ '--accent': '#6b7280', minWidth: '160px' }}
+            className="quest-topic-btn"
+            style={{ '--accent': '#6b7280', minWidth: '160px', justifyContent: 'center' }}
             onClick={() => { clearSession(topic); setPendingResume(null); setMessages([]); askAI([], topic); }}
           >
-            Start Fresh
+            New Adventure
           </button>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}>
-          <button className="socratic-exit-btn" onClick={() => { setPendingResume(null); setTopic(null); }}>
-            &larr; Back to Topics
+          <button className="quest-exit-btn" onClick={() => { setPendingResume(null); setTopic(null); }}>
+            &larr; Back to Dungeons
           </button>
         </div>
       </div>
@@ -353,23 +346,23 @@ export default function SocraticMode({ onExit }) {
   // -- Topic selector --
   if (!topic) {
     return (
-      <div className="socratic-select">
-        <div className="socratic-select-header">
-          <button className="socratic-exit-btn" onClick={onExit}>&larr; Exit</button>
-          <h1 className="socratic-title">Socratic Mode</h1>
-          <span className="socratic-subtitle">Pick a topic to explore</span>
+      <div className="quest-select">
+        <div className="quest-select-header">
+          <button className="quest-exit-btn" onClick={onExit}>&larr; Exit</button>
+          <h1 className="quest-title">Quest Mode</h1>
+          <span className="quest-subtitle">Choose your dungeon</span>
         </div>
-        <div className="socratic-topic-grid">
+        <div className="quest-topic-grid">
           {ALL_TOPICS.map(t => (
             <button
               key={t}
-              className="socratic-topic-btn"
-              style={{ '--accent': TOPIC_COLORS[t] || '#8b5cf6' }}
+              className="quest-topic-btn"
+              style={{ '--accent': TOPIC_COLORS[t] || '#b45309' }}
               onClick={() => setTopic(t)}
             >
-              <span className="socratic-topic-dot" style={{ background: TOPIC_COLORS[t] || '#8b5cf6' }} />
+              <span className="quest-topic-dot" style={{ background: TOPIC_COLORS[t] || '#b45309' }} />
               {t}
-              {hasSession(t) && <span style={{ fontSize: '0.65rem', opacity: 0.7, marginLeft: '0.4rem' }}>resume</span>}
+              {hasSession(t) && <span style={{ fontSize: '0.65rem', opacity: 0.7, marginLeft: '0.4rem', color: '#f59e0b' }}>quest active</span>}
             </button>
           ))}
         </div>
@@ -377,46 +370,55 @@ export default function SocraticMode({ onExit }) {
     );
   }
 
-  const accentColor = TOPIC_COLORS[topic] || '#8b5cf6';
+  const accentColor = TOPIC_COLORS[topic] || '#b45309';
 
   // -- Chat view --
   return (
-    <div className="socratic-chat">
+    <div className="quest-chat">
       {/* Header */}
-      <div className="socratic-header" style={{ '--accent': accentColor }}>
-        <button className="socratic-exit-btn" onClick={onExit}>&larr; Exit</button>
-        <div className="socratic-header-center">
-          <span className="socratic-header-mode">Socratic Mode</span>
-          <button className="socratic-topic-pill" style={{ background: accentColor }} onClick={handleChangeTopic}>
+      <div className="quest-header">
+        <button className="quest-exit-btn" onClick={onExit}>&larr; Exit</button>
+        <div className="quest-header-center">
+          <span className="quest-header-mode">Quest Mode</span>
+          <button className="quest-topic-pill" style={{ background: accentColor }} onClick={handleChangeTopic}>
             {topic} &darr;
           </button>
         </div>
         <div style={{ width: 60 }} />
       </div>
 
+      {/* HP Bar */}
+      <div className="quest-hp-bar">
+        <span className="quest-hp-label">HP {stats.hp}/20</span>
+        <div className="quest-hp-track">
+          <div className="quest-hp-fill" style={{ width: `${hpPercent}%`, background: hpColor }} />
+        </div>
+        <span className="quest-stats">Lv.{stats.level} | XP:{stats.xp}</span>
+      </div>
+
       {/* Messages */}
-      <div className="socratic-messages">
+      <div className="quest-messages">
         {messages.length === 0 && !streaming && !error && (
-          <div className="socratic-loading">
-            <span className="socratic-dot-pulse" />
-            <span className="socratic-dot-pulse" />
-            <span className="socratic-dot-pulse" />
+          <div className="quest-loading">
+            <span className="quest-dot-pulse" />
+            <span className="quest-dot-pulse" />
+            <span className="quest-dot-pulse" />
           </div>
         )}
 
         {error && (
-          <div className="socratic-error">{error}</div>
+          <div className="quest-error">{error}</div>
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} className={`socratic-bubble-wrap ${msg.role}`}>
+          <div key={i} className={`quest-bubble-wrap ${msg.role}`}>
             {msg.role === 'assistant' && (
-              <div className="socratic-avatar" style={{ background: accentColor }}>S</div>
+              <div className="quest-avatar">&#x1f9d9;</div>
             )}
-            <div className={`socratic-bubble ${msg.role}`} style={msg.role === 'assistant' ? { '--accent': accentColor } : {}}>
+            <div className={`quest-bubble ${msg.role}`}>
               {msg.content}
               {msg.role === 'assistant' && streaming && i === messages.length - 1 && (
-                <span className="socratic-cursor" />
+                <span className="quest-cursor" />
               )}
             </div>
           </div>
@@ -426,11 +428,11 @@ export default function SocraticMode({ onExit }) {
       </div>
 
       {/* Input */}
-      <div className="socratic-input-bar">
+      <div className="quest-input-bar">
         <textarea
           ref={inputRef}
-          className="socratic-input"
-          placeholder="Your answer..."
+          className="quest-input"
+          placeholder="What do you do?"
           value={input}
           maxLength={MAX_INPUT_LENGTH}
           onChange={e => setInput(e.target.value)}
@@ -439,10 +441,9 @@ export default function SocraticMode({ onExit }) {
           disabled={streaming}
         />
         <button
-          className="socratic-send-btn"
+          className="quest-send-btn"
           onClick={handleSend}
           disabled={!input.trim() || streaming}
-          style={{ background: accentColor }}
         >
           &uarr;
         </button>

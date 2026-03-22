@@ -51,6 +51,13 @@ const ModeSelect = ({ onSelect }) => {
           <span className="mode-cta">Start Dialogue &#x2192;</span>
         </button>
 
+        <button className="mode-card quest-card-btn" onClick={() => onSelect('quest')}>
+          <span className="mode-icon">&#x1f9d9;</span>
+          <h2>Quest Mode</h2>
+          <p>A D&amp;D-style dungeon crawl. Every encounter is a technical challenge. Answer correctly to survive.</p>
+          <span className="mode-cta">Enter the Dungeon &#x2192;</span>
+        </button>
+
       </div>
     </div>
   );
