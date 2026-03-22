@@ -14,6 +14,12 @@ const TOPIC_COLORS = {
   'PCI DSS':          '#6c3483',
 };
 
+const PERSONALITIES = [
+  { id: 'socratic', icon: '🏛️', label: 'Socrates', desc: "The ancient philosopher. Questions that reveal what you don't know.", avatarLabel: 'S' },
+  { id: 'tutor', icon: '👨‍🏫', label: 'Direct Tutor', desc: 'Clear Q&A. Honest feedback. Builds from fundamentals up.', avatarLabel: 'T' },
+  { id: 'gameshow', icon: '🎤', label: 'Game Show', desc: 'High stakes. Dramatic reveals. Prime time energy.', avatarLabel: '★' },
+];
+
 const ALL_TOPICS = [...new Set(lessons.map(l => l.topic))];
 
 const MAX_INPUT_LENGTH = 500;
@@ -106,6 +112,7 @@ function hasSession(t) {
 }
 
 export default function SocraticMode({ onExit }) {
+  const [personality, setPersonality] = useState(null);
   const [topic, setTopic] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -164,6 +171,7 @@ export default function SocraticMode({ onExit }) {
         body: JSON.stringify({
           topic: currentTopic,
           history,
+          personality: personality || 'socratic',
         }),
       });
 
@@ -295,6 +303,8 @@ export default function SocraticMode({ onExit }) {
     setError(null);
   }
 
+  const activePersonality = PERSONALITIES.find(p => p.id === (personality || 'socratic'));
+
   // -- Session terminated --
   if (terminated) {
     return (
@@ -309,6 +319,32 @@ export default function SocraticMode({ onExit }) {
           <button className="socratic-exit-btn" onClick={onExit} style={{ fontSize: '1.1rem', padding: '0.75rem 2rem' }}>
             &larr; Back to Menu
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // -- Personality picker --
+  if (!personality) {
+    return (
+      <div className="socratic-select">
+        <div className="socratic-select-header">
+          <button className="socratic-exit-btn" onClick={onExit}>&larr; Exit</button>
+          <h1 className="socratic-title">Socratic Mode</h1>
+          <span className="socratic-subtitle">Choose your guide</span>
+        </div>
+        <div className="socratic-personality-grid">
+          {PERSONALITIES.map(p => (
+            <button
+              key={p.id}
+              className="socratic-personality-btn"
+              onClick={() => setPersonality(p.id)}
+            >
+              <span className="socratic-personality-icon">{p.icon}</span>
+              <span className="socratic-personality-label">{p.label}</span>
+              <span className="socratic-personality-desc">{p.desc}</span>
+            </button>
+          ))}
         </div>
       </div>
     );
@@ -357,7 +393,7 @@ export default function SocraticMode({ onExit }) {
         <div className="socratic-select-header">
           <button className="socratic-exit-btn" onClick={onExit}>&larr; Exit</button>
           <h1 className="socratic-title">Socratic Mode</h1>
-          <span className="socratic-subtitle">Pick a topic to explore</span>
+          <span className="socratic-subtitle">{activePersonality.icon} {activePersonality.label} · Pick a topic</span>
         </div>
         <div className="socratic-topic-grid">
           {ALL_TOPICS.map(t => (
@@ -373,6 +409,9 @@ export default function SocraticMode({ onExit }) {
             </button>
           ))}
         </div>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '1rem' }}>
+          <button className="socratic-exit-btn" onClick={() => setPersonality(null)}>← Change Guide</button>
+        </div>
       </div>
     );
   }
@@ -386,7 +425,7 @@ export default function SocraticMode({ onExit }) {
       <div className="socratic-header" style={{ '--accent': accentColor }}>
         <button className="socratic-exit-btn" onClick={onExit}>&larr; Exit</button>
         <div className="socratic-header-center">
-          <span className="socratic-header-mode">Socratic Mode</span>
+          <span className="socratic-header-mode">{activePersonality.icon} {activePersonality.label}</span>
           <button className="socratic-topic-pill" style={{ background: accentColor }} onClick={handleChangeTopic}>
             {topic} &darr;
           </button>
@@ -411,7 +450,7 @@ export default function SocraticMode({ onExit }) {
         {messages.map((msg, i) => (
           <div key={i} className={`socratic-bubble-wrap ${msg.role}`}>
             {msg.role === 'assistant' && (
-              <div className="socratic-avatar" style={{ background: accentColor }}>S</div>
+              <div className="socratic-avatar" style={{ background: accentColor }}>{activePersonality.avatarLabel}</div>
             )}
             <div className={`socratic-bubble ${msg.role}`} style={msg.role === 'assistant' ? { '--accent': accentColor } : {}}>
               {msg.content}

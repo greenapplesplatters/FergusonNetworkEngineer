@@ -13,50 +13,61 @@ const ModeSelect = ({ onSelect }) => {
         <p>Network Engineering</p>
       </div>
 
-      <div className="mode-cards">
+      <div className="mode-categories">
 
-        <button className="mode-card learn-card-btn" onClick={() => onSelect('learn')}>
-          <span className="mode-icon">&#x1f9e0;</span>
-          <h2>Study Mode</h2>
-          <p>Real-world network incidents and narrative lessons. BGP, OSPF, DMVPN, MPLS, and more.</p>
-          <span className="mode-cta">Start Learning &#x2192;</span>
-        </button>
-
-        <button className="mode-card study-card-btn" onClick={() => onSelect('study')}>
-          <span className="mode-icon">&#x1f4da;</span>
-          <h2>Test Mode</h2>
-          <p>Adaptive cards ranked by your weakest topics. Tracks mastery over time.</p>
-          <span className="mode-cta">Start Studying &#x2192;</span>
-        </button>
-
-        <button className="mode-card challenge-card-btn" onClick={() => onSelect('challenge')}>
-          <span className="mode-icon">&#x1f480;</span>
-          <h2>Challenge Mode</h2>
-          <p>4 hearts. Every wrong answer costs you one. How far can you go?</p>
-          <div className="challenge-stats">
-            {high > 0 && (
-              <span className="stat-pill high">&#x1f3c6; Best: {high}</span>
-            )}
-            {last !== null && (
-              <span className="stat-pill last">Last: {last}</span>
-            )}
+        <section className="mode-section">
+          <h3 className="mode-section-label">Learn</h3>
+          <div className="mode-pair">
+            <button className="mode-card mode-card-half learn-card-btn" onClick={() => onSelect('learn')}>
+              <span className="mode-icon">&#x1f9e0;</span>
+              <h2>Study</h2>
+              <p>Narrative lessons. BGP, OSPF, MPLS &amp; more.</p>
+              <span className="mode-cta">Start &#x2192;</span>
+            </button>
+            <button className="mode-card mode-card-half study-card-btn" onClick={() => onSelect('study')}>
+              <span className="mode-icon">&#x1f4da;</span>
+              <h2>Test</h2>
+              <p>Adaptive cards ranked by weakness.</p>
+              <span className="mode-cta">Start &#x2192;</span>
+            </button>
           </div>
-          <span className="mode-cta">Accept Challenge &#x2192;</span>
-        </button>
+        </section>
 
-        <button className="mode-card socratic-card-btn" onClick={() => onSelect('socratic')}>
-          <span className="mode-icon">&#x1f3db;</span>
-          <h2>Socratic Mode</h2>
-          <p>Conversational learning. An AI tutor asks you questions and guides you to discover answers yourself.</p>
-          <span className="mode-cta">Start Dialogue &#x2192;</span>
-        </button>
+        <section className="mode-section">
+          <h3 className="mode-section-label">Challenge</h3>
+          <button className="mode-card challenge-card-btn" onClick={() => onSelect('challenge')}>
+            <span className="mode-icon">&#x1f480;</span>
+            <h2>Challenge Mode</h2>
+            <p>4 hearts. Every wrong answer costs you one. How far can you go?</p>
+            <div className="challenge-stats">
+              {high > 0 && (
+                <span className="stat-pill high">&#x1f3c6; Best: {high}</span>
+              )}
+              {last !== null && (
+                <span className="stat-pill last">Last: {last}</span>
+              )}
+            </div>
+            <span className="mode-cta">Accept Challenge &#x2192;</span>
+          </button>
+        </section>
 
-        <button className="mode-card quest-card-btn" onClick={() => onSelect('quest')}>
-          <span className="mode-icon">&#x1f9d9;</span>
-          <h2>Quest Mode</h2>
-          <p>A D&amp;D-style dungeon crawl. Every encounter is a technical challenge. Answer correctly to survive.</p>
-          <span className="mode-cta">Enter the Dungeon &#x2192;</span>
-        </button>
+        <section className="mode-section">
+          <h3 className="mode-section-label">AI Dialogue</h3>
+          <div className="mode-pair">
+            <button className="mode-card mode-card-half socratic-card-btn" onClick={() => onSelect('socratic')}>
+              <span className="mode-icon">&#x1f3db;</span>
+              <h2>Socratic</h2>
+              <p>Guided dialogue. Real understanding follows.</p>
+              <span className="mode-cta">Begin &#x2192;</span>
+            </button>
+            <button className="mode-card mode-card-half quest-card-btn" onClick={() => onSelect('quest')}>
+              <span className="mode-icon">&#x1f9d9;</span>
+              <h2>Quest</h2>
+              <p>Dungeon crawl. Every encounter is a challenge.</p>
+              <span className="mode-cta">Enter &#x2192;</span>
+            </button>
+          </div>
+        </section>
 
       </div>
     </div>
