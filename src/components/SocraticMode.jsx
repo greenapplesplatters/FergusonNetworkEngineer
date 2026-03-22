@@ -21,10 +21,7 @@ const ALL_TOPICS = [...new Set(lessons.map(l => l.topic))];
 const MAX_INPUT_LENGTH = 500;
 
 const INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|prompt|guidelines|directives)/i,
-  /disregard\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|prompt|guidelines|directives)/i,
-  /forget\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|prompt|guidelines|directives)/i,
-  /override\s+(all\s+)?(previous|prior|above|earlier|your)\s+(instructions|rules|prompt|guidelines|directives)/i,
+  /(ignore|disregard|forget|override|skip|drop|cancel|delete|erase|wipe|clear)\s+.{0,30}(instructions|rules|prompt|guidelines|directives|constraints|boundaries|limitations|programming)/i,
   /you\s+are\s+now\s+(a|an|my)\s+/i,
   /act\s+as\s+(a|an|my|if)\s+/i,
   /pretend\s+(you('re|\s+are)\s+|to\s+be\s+)/i,
