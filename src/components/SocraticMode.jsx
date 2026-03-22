@@ -72,6 +72,7 @@ function setLockout() {
 const SESSION_PREFIX = 'socratic_session_';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 const SESSION_MAX_MESSAGES = 76; // server MAX_HISTORY_LENGTH is 80; leave a 4-message buffer
+const SUMMARIZE_THRESHOLD = 50;
 
 function getSessionKey(t) {
   return SESSION_PREFIX + t.toLowerCase().replace(/\s+/g, '_');
@@ -113,10 +114,29 @@ function hasSession(t) {
 
 // Trim history for API: always keep the first message (AI's opening framing) +
 // the most recent messages so context window never exceeds server limit.
-function buildApiHistory(msgs) {
+function buildApiHistory(msgs, summary = null) {
   const mapped = msgs.map(m => ({ role: m.role, content: m.content }));
   if (mapped.length <= SESSION_MAX_MESSAGES) return mapped;
-  return [mapped[0], ...mapped.slice(-(SESSION_MAX_MESSAGES - 1))];
+  const tail = mapped.slice(-(SESSION_MAX_MESSAGES - 1));
+  const anchor = summary
+    ? { role: 'assistant', content: `[Earlier context] ${summary}` }
+    : mapped[0];
+  return [anchor, ...tail];
+}
+
+async function summarizeHistory(topic, messages) {
+  try {
+    const response = await fetch('/api/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, messages }),
+    });
+    if (!response.ok) return null;
+    const { summary } = await response.json();
+    return summary || null;
+  } catch {
+    return null;
+  }
 }
 
 export default function SocraticMode({ onExit }) {
@@ -129,6 +149,7 @@ export default function SocraticMode({ onExit }) {
   const [terminated, setTerminated] = useState(false);
   const [pendingResume, setPendingResume] = useState(null);
   const strikesRef = useRef(0);
+  const summaryRef = useRef(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -150,6 +171,16 @@ export default function SocraticMode({ onExit }) {
       saveSession(topic, messages);
     }
   }, [streaming, messages, topic]);
+
+  // Pre-compute summary in the background when threshold is reached
+  useEffect(() => {
+    if (messages.length === SUMMARIZE_THRESHOLD && !summaryRef.current) {
+      const toSummarize = messages.slice(0, SUMMARIZE_THRESHOLD - 20);
+      summarizeHistory(topic, toSummarize).then(s => {
+        if (s) summaryRef.current = s;
+      });
+    }
+  }, [messages.length]);
 
   // Check for saved session when topic is selected
   useEffect(() => {
@@ -290,7 +321,7 @@ export default function SocraticMode({ onExit }) {
     setMessages(updatedHistory);
     setInput('');
 
-    await askAI(buildApiHistory(updatedHistory), topic);
+    await askAI(buildApiHistory(updatedHistory, summaryRef.current), topic);
   }
 
   function handleKeyDown(e) {
