@@ -282,7 +282,7 @@ export default function SocraticMode({ onExit }) {
     setMessages(updatedHistory);
     setInput('');
 
-    const apiHistory = updatedHistory.map(m => ({
+    const apiHistory = updatedHistory.slice(-SESSION_MAX_MESSAGES).map(m => ({
       role: m.role,
       content: m.content,
     }));
