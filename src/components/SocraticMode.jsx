@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import lessons from '../data/lessons.json';
-import feedCards from '../data/feed.json';
 import './SocraticMode.css';
 
 const TOPIC_COLORS = {
@@ -45,35 +44,6 @@ function detectInjection(text) {
   return INJECTION_PATTERNS.some(pattern => pattern.test(text));
 }
 
-function buildKnowledgeBase(topic) {
-  const lesson = lessons.find(l => l.topic === topic);
-  const cards = feedCards.filter(c => c.topic === topic);
-
-  let kb = '';
-
-  if (lesson) {
-    kb += `## Lesson: ${lesson.headline}\n`;
-    lesson.lesson_pages.forEach(p => {
-      kb += `### ${p.title}\n${p.body}\n\n`;
-    });
-  }
-
-  if (cards.length > 0) {
-    kb += `## Key Concepts\n`;
-    cards.forEach(c => {
-      if (c.quiz_format) {
-        kb += `- Q: ${c.quiz_format.question}\n`;
-        kb += `  A: ${c.quiz_format.explanation}\n`;
-      }
-      if (c.rule_format?.statement) {
-        kb += `- Rule: ${c.rule_format.statement}\n`;
-      }
-    });
-  }
-
-  return kb;
-}
-
 export default function SocraticMode({ onExit }) {
   const [topic, setTopic] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -105,15 +75,12 @@ export default function SocraticMode({ onExit }) {
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
     try {
-      const knowledgeBase = buildKnowledgeBase(currentTopic);
-
       const response = await fetch('/api/socratic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic: currentTopic,
           history,
-          knowledgeBase,
         }),
       });
 
