@@ -71,7 +71,7 @@ function setLockout() {
 
 const SESSION_PREFIX = 'socratic_session_';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
-const SESSION_MAX_MESSAGES = 36; // leave room for next exchange under MAX_HISTORY_LENGTH
+const SESSION_MAX_MESSAGES = 76; // server MAX_HISTORY_LENGTH is 80; leave a 4-message buffer
 
 function getSessionKey(t) {
   return SESSION_PREFIX + t.toLowerCase().replace(/\s+/g, '_');
@@ -109,6 +109,14 @@ function hasSession(t) {
     if (Date.now() - data.savedAt > SESSION_MAX_AGE) return false;
     return data.messages?.length > 0;
   } catch { return false; }
+}
+
+// Trim history for API: always keep the first message (AI's opening framing) +
+// the most recent messages so context window never exceeds server limit.
+function buildApiHistory(msgs) {
+  const mapped = msgs.map(m => ({ role: m.role, content: m.content }));
+  if (mapped.length <= SESSION_MAX_MESSAGES) return mapped;
+  return [mapped[0], ...mapped.slice(-(SESSION_MAX_MESSAGES - 1))];
 }
 
 export default function SocraticMode({ onExit }) {
@@ -282,12 +290,7 @@ export default function SocraticMode({ onExit }) {
     setMessages(updatedHistory);
     setInput('');
 
-    const apiHistory = updatedHistory.slice(-SESSION_MAX_MESSAGES).map(m => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    await askAI(apiHistory, topic);
+    await askAI(buildApiHistory(updatedHistory), topic);
   }
 
   function handleKeyDown(e) {
