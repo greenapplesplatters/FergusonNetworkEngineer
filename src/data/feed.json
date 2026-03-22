@@ -1,0 +1,2018 @@
+[
+  {
+    "concept_id": "bgp_q01",
+    "topic": "BGP",
+    "question_text": "eBGP vs iBGP next-hop behavior",
+    "quiz_format": {
+      "question": "When an eBGP-learned prefix is redistributed into iBGP, what happens to the next-hop attribute by default?",
+      "options": [
+        { "text": "The next-hop is set to the iBGP speaker's loopback address automatically.", "correct": false },
+        { "text": "The next-hop remains unchanged, preserving the eBGP peer's address.", "correct": true },
+        { "text": "The next-hop is replaced with 0.0.0.0 until a route-map overrides it.", "correct": false },
+        { "text": "The next-hop is removed and must be resolved via IGP recursion only.", "correct": false }
+      ],
+      "explanation": "By default, iBGP does **not** change the next-hop attribute when advertising routes learned from eBGP. This means the iBGP peer must have a route to the eBGP next-hop, typically via an IGP. The **next-hop-self** command on the iBGP neighbor statement overrides this behavior."
+    },
+    "scenario_format": {
+      "question": "Ferguson's core routers peer via iBGP across the data center backbone. A new ISP circuit is brought up on an edge router via eBGP. Internal routers cannot reach the ISP-learned prefixes. What is the most likely cause?",
+      "options": [
+        { "text": "The ISP is advertising with a community that blocks internal propagation.", "correct": false },
+        { "text": "The edge router is not setting next-hop-self on iBGP advertisements, so internal routers lack a route to the eBGP next-hop.", "correct": true },
+        { "text": "iBGP requires a full mesh, and one peer is missing.", "correct": false },
+        { "text": "The ISP is sending a default route that overrides more-specific prefixes.", "correct": false }
+      ],
+      "explanation": "When an eBGP route is advertised into iBGP, the **next-hop is preserved** by default. If internal routers have no IGP route to the eBGP peer's address, the prefix is marked as unreachable. Configuring **next-hop-self** on the edge router's iBGP neighbor statements resolves this."
+    },
+    "rule_format": {
+      "statement": "iBGP preserves the **eBGP next-hop** by default; always configure **next-hop-self** on edge routers advertising into the iBGP mesh to ensure internal reachability."
+    }
+  },
+  {
+    "concept_id": "bgp_q02",
+    "topic": "BGP",
+    "question_text": "BGP path selection order of operations",
+    "quiz_format": {
+      "question": "In Cisco's BGP best-path selection algorithm, which attribute is evaluated first?",
+      "options": [
+        { "text": "Local Preference", "correct": false },
+        { "text": "AS Path length", "correct": false },
+        { "text": "Weight", "correct": true },
+        { "text": "MED (Multi-Exit Discriminator)", "correct": false }
+      ],
+      "explanation": "Cisco's BGP best-path algorithm evaluates **Weight** first because it is a Cisco-proprietary, locally significant attribute. The full order begins: **Weight > Local Preference > Locally originated > AS Path length > Origin type > MED**. Weight is set per-neighbor and never propagated to other routers."
+    },
+    "scenario_format": {
+      "question": "Ferguson has dual ISP connections at the primary DC. You want Router-A to prefer ISP-1 for all outbound traffic without affecting any other router's decision. Which attribute should you set?",
+      "options": [
+        { "text": "Set Local Preference to 200 for ISP-1 routes.", "correct": false },
+        { "text": "Set Weight to 500 on the ISP-1 neighbor statement on Router-A.", "correct": true },
+        { "text": "Prepend the AS path for ISP-2 routes globally.", "correct": false },
+        { "text": "Set MED to 0 for ISP-1 routes.", "correct": false }
+      ],
+      "explanation": "**Weight** is locally significant to the router and is never advertised to peers, making it the ideal choice when you want to influence path selection on a single router only. **Local Preference** would propagate to all iBGP peers and change their decisions too."
+    },
+    "rule_format": {
+      "statement": "**Weight** is evaluated first in Cisco BGP path selection and is **locally significant** — use it when you need to influence one router's preference without affecting the rest of the iBGP domain."
+    }
+  },
+  {
+    "concept_id": "bgp_q03",
+    "topic": "BGP",
+    "question_text": "BGP Local Preference and traffic engineering",
+    "quiz_format": {
+      "question": "What is the default Local Preference value, and how does it influence path selection?",
+      "options": [
+        { "text": "Default is 0; lower values are preferred.", "correct": false },
+        { "text": "Default is 100; higher values are preferred.", "correct": true },
+        { "text": "Default is 100; lower values are preferred.", "correct": false },
+        { "text": "Default is 200; higher values are preferred.", "correct": false }
+      ],
+      "explanation": "**Local Preference** defaults to **100** and a **higher** value is preferred. It is shared among all iBGP peers within an AS, making it the primary tool for influencing outbound path selection across an entire autonomous system."
+    },
+    "scenario_format": {
+      "question": "Ferguson's network team wants all routers in AS 65000 to prefer ISP-A over ISP-B for outbound traffic to the internet. Which approach is correct?",
+      "options": [
+        { "text": "Set Weight on every router's ISP-A neighbor statement.", "correct": false },
+        { "text": "Set Local Preference to 200 on routes received from ISP-A at the edge router; it will propagate via iBGP.", "correct": true },
+        { "text": "Configure a static default route pointing to ISP-A with a lower AD.", "correct": false },
+        { "text": "Prepend Ferguson's own AS on ISP-B advertisements inbound.", "correct": false }
+      ],
+      "explanation": "**Local Preference** propagates to all iBGP peers, so setting it at the edge is sufficient to steer the entire AS's outbound traffic. **Weight** would only affect the local router, and AS prepending controls **inbound**, not outbound, traffic."
+    },
+    "rule_format": {
+      "statement": "**Local Preference** (default 100, higher preferred) propagates across iBGP and is the primary tool for **AS-wide outbound** traffic engineering."
+    }
+  },
+  {
+    "concept_id": "bgp_q04",
+    "topic": "BGP",
+    "question_text": "AS Path prepending for inbound traffic engineering",
+    "quiz_format": {
+      "question": "When you prepend your own AS number to BGP advertisements sent to a peer, what is the intended effect?",
+      "options": [
+        { "text": "It increases the local preference for those routes.", "correct": false },
+        { "text": "It makes the path appear longer to external peers, discouraging inbound traffic via that link.", "correct": true },
+        { "text": "It triggers route dampening on the peer.", "correct": false },
+        { "text": "It prevents the route from being installed in the RIB.", "correct": false }
+      ],
+      "explanation": "**AS Path prepending** artificially lengthens the AS path, making the route less attractive compared to a shorter-path alternative. This is a common **inbound traffic engineering** technique. It only works when the remote AS has an alternative, shorter path to your prefixes."
+    },
+    "scenario_format": {
+      "question": "Ferguson has two ISP uplinks at the DC. Inbound traffic from the internet is splitting roughly 50/50 but the team wants ISP-A to carry 80% of inbound. What should be configured on the ISP-B peering?",
+      "options": [
+        { "text": "Set MED to a higher value on ISP-B advertisements.", "correct": false },
+        { "text": "Prepend Ferguson's AS number 2-3 times on routes advertised to ISP-B.", "correct": true },
+        { "text": "Increase Local Preference on ISP-B-learned routes.", "correct": false },
+        { "text": "Apply a weight of 0 to ISP-B's neighbor statement.", "correct": false }
+      ],
+      "explanation": "**AS Path prepending** on outbound advertisements to ISP-B makes the path through ISP-B appear longer to the rest of the internet, steering inbound traffic toward the shorter path through ISP-A. **MED** only influences a single neighboring AS and is often ignored."
+    },
+    "rule_format": {
+      "statement": "**AS Path prepending** on outbound advertisements lengthens the path seen by the internet, steering **inbound** traffic toward the shorter alternative link."
+    }
+  },
+  {
+    "concept_id": "bgp_q05",
+    "topic": "BGP",
+    "question_text": "MED attribute scope and behavior",
+    "quiz_format": {
+      "question": "By default, when is the MED attribute compared between BGP routes?",
+      "options": [
+        { "text": "Always, regardless of the originating AS.", "correct": false },
+        { "text": "Only between routes received from the same neighboring AS.", "correct": true },
+        { "text": "Only between iBGP-learned routes.", "correct": false },
+        { "text": "Only when deterministic MED is disabled.", "correct": false }
+      ],
+      "explanation": "By default, Cisco compares **MED** only between paths received from the **same neighboring AS**. The **bgp always-compare-med** command overrides this behavior. MED is a **non-transitive optional** attribute — it is sent to a direct eBGP peer but not passed beyond that AS."
+    },
+    "scenario_format": {
+      "question": "Ferguson peers with ISP-X at two different PoPs. ISP-X sets different MED values on prefixes sent to each PoP to influence Ferguson's outbound traffic. Will MED be compared by default?",
+      "options": [
+        { "text": "No — MED comparison only works within iBGP.", "correct": false },
+        { "text": "Yes — both routes originate from the same AS, so MED is compared.", "correct": true },
+        { "text": "No — MED is only evaluated after AS path length.", "correct": false },
+        { "text": "Yes — MED is always compared regardless of origin.", "correct": false }
+      ],
+      "explanation": "Since both routes come from **the same AS** (ISP-X), Cisco's default behavior will compare **MED** values. A **lower MED is preferred**. If routes came from two different ISPs, MED would not be compared unless **bgp always-compare-med** is configured."
+    },
+    "rule_format": {
+      "statement": "**MED** (lower preferred) is compared only between routes from the **same neighboring AS** by default; it lets a neighbor influence your outbound path selection across their multiple peering points."
+    }
+  },
+  {
+    "concept_id": "bgp_q06",
+    "topic": "BGP",
+    "question_text": "BGP route reflectors and iBGP scalability",
+    "quiz_format": {
+      "question": "What problem does a BGP route reflector solve?",
+      "options": [
+        { "text": "It eliminates the need for eBGP multi-hop.", "correct": false },
+        { "text": "It relaxes the iBGP full-mesh requirement by allowing a central router to reflect routes to clients.", "correct": true },
+        { "text": "It replaces confederations in multi-AS designs.", "correct": false },
+        { "text": "It provides automatic failover between eBGP peers.", "correct": false }
+      ],
+      "explanation": "iBGP requires a **full mesh** of peerings — for N routers, that means N*(N-1)/2 sessions. A **route reflector** breaks this requirement by reflecting routes from clients to other clients. Clients only need to peer with the reflector, dramatically reducing configuration complexity."
+    },
+    "scenario_format": {
+      "question": "Ferguson's DC core has 12 routers running iBGP. Managing 66 peering sessions has become operationally burdensome. What is the best solution to simplify the topology?",
+      "options": [
+        { "text": "Migrate all routers to eBGP with private AS numbers.", "correct": false },
+        { "text": "Deploy two route reflectors; all other routers become RR clients, reducing sessions to 22.", "correct": true },
+        { "text": "Use static redistribution between routers.", "correct": false },
+        { "text": "Enable BGP confederations with 12 sub-AS numbers.", "correct": false }
+      ],
+      "explanation": "**Route reflectors** allow clients to peer only with the RR, eliminating the full-mesh requirement. Deploying **two RRs** provides redundancy. Each client needs only two sessions (one to each RR), vastly simplifying the iBGP topology from **66 to approximately 22 sessions**."
+    },
+    "rule_format": {
+      "statement": "**Route reflectors** eliminate the iBGP full-mesh requirement; deploy **redundant RRs** and make all other routers clients to scale iBGP without exponential session growth."
+    }
+  },
+  {
+    "concept_id": "bgp_q07",
+    "topic": "BGP",
+    "question_text": "BGP communities for policy control",
+    "quiz_format": {
+      "question": "Which well-known BGP community tells a receiving router not to advertise the route to any eBGP peer?",
+      "options": [
+        { "text": "no-export", "correct": true },
+        { "text": "no-advertise", "correct": false },
+        { "text": "local-AS", "correct": false },
+        { "text": "internet", "correct": false }
+      ],
+      "explanation": "The **no-export** community prevents a route from being advertised to eBGP peers, keeping it within the local AS (or confederation). **No-advertise** is stricter — it prevents advertisement to any peer, including iBGP. **Local-AS** keeps the route within the local sub-AS in a confederation."
+    },
+    "scenario_format": {
+      "question": "Ferguson receives an aggregate from an MPLS provider but should not readvertise it to the public internet ISP. The route must still be visible to all iBGP routers internally. Which community should be applied?",
+      "options": [
+        { "text": "no-advertise — blocks all advertisements.", "correct": false },
+        { "text": "no-export — blocks eBGP advertisement while allowing iBGP propagation.", "correct": true },
+        { "text": "local-AS — restricts the route to a confederation sub-AS.", "correct": false },
+        { "text": "A custom community with a deny route-map on every eBGP neighbor.", "correct": false }
+      ],
+      "explanation": "**No-export** ensures the route is shared across all iBGP peers but is never sent to an eBGP neighbor. This cleanly prevents Ferguson from accidentally becoming a transit AS for the MPLS provider's prefix toward the public internet."
+    },
+    "rule_format": {
+      "statement": "**no-export** keeps a route within your AS by blocking eBGP advertisements; **no-advertise** blocks all advertisements including iBGP — choose based on whether internal visibility is needed."
+    }
+  },
+  {
+    "concept_id": "bgp_q08",
+    "topic": "BGP",
+    "question_text": "BGP graceful restart and NSF",
+    "quiz_format": {
+      "question": "What is the primary benefit of BGP Graceful Restart during a control-plane failover?",
+      "options": [
+        { "text": "It immediately reconverges by flushing the RIB.", "correct": false },
+        { "text": "It preserves the forwarding table so data-plane traffic continues while the control plane restarts.", "correct": true },
+        { "text": "It triggers BFD to switch to a backup path.", "correct": false },
+        { "text": "It prevents route flaps by suppressing all BGP updates for 60 seconds.", "correct": false }
+      ],
+      "explanation": "**BGP Graceful Restart** (GR) allows the restarting router to maintain its **forwarding table** during a control-plane restart. The peer (helper) marks routes as stale but continues forwarding. This enables **Non-Stop Forwarding (NSF)**, minimizing traffic disruption during supervisor failovers."
+    },
+    "scenario_format": {
+      "question": "Ferguson's core router has dual supervisors. During a supervisor switchover, the BGP sessions tear down and reconvergence causes a 90-second outage across branch WAN circuits. What feature should be enabled?",
+      "options": [
+        { "text": "BFD with aggressive timers to detect failure faster.", "correct": false },
+        { "text": "BGP Graceful Restart with NSF to preserve forwarding during the switchover.", "correct": true },
+        { "text": "BGP fast-external-fallover to accelerate reconvergence.", "correct": false },
+        { "text": "Reduce BGP hold timers to 10 seconds.", "correct": false }
+      ],
+      "explanation": "**Graceful Restart with NSF** tells the BGP peer to keep its routes in a stale state and continue forwarding during the switchover. Once the new supervisor initializes, BGP re-establishes and refreshes routes **without dropping data-plane traffic**."
+    },
+    "rule_format": {
+      "statement": "**BGP Graceful Restart** with **NSF** preserves the forwarding table during control-plane restarts, preventing data-plane outages on dual-supervisor platforms."
+    }
+  },
+  {
+    "concept_id": "bgp_q09",
+    "topic": "BGP",
+    "question_text": "BGP peer troubleshooting — stuck in Active state",
+    "quiz_format": {
+      "question": "A BGP session is stuck in the Active state. Which of the following is the most likely cause?",
+      "options": [
+        { "text": "The remote peer has a mismatched AS number configured.", "correct": false },
+        { "text": "The TCP session on port 179 cannot be established due to a connectivity or ACL issue.", "correct": true },
+        { "text": "The BGP hold timer has expired.", "correct": false },
+        { "text": "The route reflector cluster-id is misconfigured.", "correct": false }
+      ],
+      "explanation": "The **Active** state means BGP is actively trying to establish a TCP connection on **port 179** but failing. Common causes include IP reachability issues, ACL blocking TCP/179, incorrect **update-source** configuration, or TTL issues with eBGP multi-hop. A mismatched AS would result in an **OpenSent** failure, not Active."
+    },
+    "scenario_format": {
+      "question": "Ferguson's edge router shows a new ISP peering stuck in Active state. Pings to the ISP's peer IP succeed. What should you check next?",
+      "options": [
+        { "text": "Whether the ISP has a matching route-map applied.", "correct": false },
+        { "text": "Whether an ACL or firewall rule is blocking TCP port 179, and whether the update-source matches the expected source IP.", "correct": true },
+        { "text": "Whether the ISP is sending a default route.", "correct": false },
+        { "text": "Whether the BGP scan timer needs to be reduced.", "correct": false }
+      ],
+      "explanation": "A session in **Active** state means TCP cannot connect on port 179. Since ICMP works, the issue is likely a **firewall or ACL blocking TCP/179**, or the source IP of the TCP SYN does not match what the ISP expects (wrong **update-source**). Always verify both ends' neighbor configurations match."
+    },
+    "rule_format": {
+      "statement": "BGP stuck in **Active** = TCP/179 cannot connect. Check **ACLs, firewalls, update-source**, and eBGP multi-hop TTL before investigating BGP-layer mismatches."
+    }
+  },
+  {
+    "concept_id": "bgp_q10",
+    "topic": "BGP",
+    "question_text": "BGP route dampening and stability",
+    "quiz_format": {
+      "question": "What is the purpose of BGP route dampening?",
+      "options": [
+        { "text": "To aggregate routes into a single summary prefix.", "correct": false },
+        { "text": "To suppress routes that flap repeatedly, preventing instability from propagating.", "correct": true },
+        { "text": "To rate-limit the number of prefixes a peer can advertise.", "correct": false },
+        { "text": "To prefer routes with the shortest AS path.", "correct": false }
+      ],
+      "explanation": "**Route dampening** assigns a penalty to routes each time they flap (withdraw/re-advertise). When the penalty exceeds the **suppress limit**, the route is suppressed. It becomes eligible again when the penalty decays below the **reuse limit**. This prevents unstable routes from causing continuous reconvergence."
+    },
+    "scenario_format": {
+      "question": "Ferguson's ISP uplink is on an unstable last-mile circuit that flaps every few minutes. Each flap causes BGP reconvergence across the entire iBGP mesh. How can the impact be contained?",
+      "options": [
+        { "text": "Enable BFD to detect flaps faster.", "correct": false },
+        { "text": "Apply BGP route dampening to penalize and suppress the flapping prefixes.", "correct": true },
+        { "text": "Increase the BGP hold timer to 600 seconds.", "correct": false },
+        { "text": "Remove the eBGP peering and use a static default route.", "correct": false }
+      ],
+      "explanation": "**Route dampening** suppresses repeatedly flapping routes so the instability does not ripple through the iBGP mesh. The flapping prefix gets a **penalty** on each withdrawal; once it exceeds the **suppress limit**, BGP stops advertising it until the penalty decays. This stabilizes convergence while the circuit issue is resolved."
+    },
+    "rule_format": {
+      "statement": "**Route dampening** penalizes flapping routes — when the penalty exceeds the **suppress limit**, the route is withheld until it decays below the **reuse limit**, preventing instability from cascading through the network."
+    }
+  },
+  {
+    "concept_id": "ospf_q01",
+    "topic": "OSPF",
+    "question_text": "OSPF area types and stub area behavior",
+    "quiz_format": {
+      "question": "In an OSPF totally stubby area, which LSA types are permitted?",
+      "options": [
+        { "text": "Types 1, 2, and 3.", "correct": false },
+        { "text": "Types 1, 2, and a single Type 3 default route.", "correct": true },
+        { "text": "Types 1, 2, 3, and 5.", "correct": false },
+        { "text": "Only Types 1 and 2.", "correct": false }
+      ],
+      "explanation": "A **totally stubby area** blocks Type 3 (summary), Type 4 (ASBR summary), and Type 5 (external) LSAs. The ABR injects a **single Type 3 default route** (0.0.0.0/0) so internal routers can reach external destinations. Only **Type 1 (router) and Type 2 (network) LSAs** are originated within the area."
+    },
+    "scenario_format": {
+      "question": "Ferguson wants to minimize the LSDB size at 1,700 branch routers that each connect back to a regional hub. What OSPF area type would be most effective for branch sites?",
+      "options": [
+        { "text": "Standard area — branches need full routing visibility.", "correct": false },
+        { "text": "Totally stubby area — blocks external and inter-area LSAs, injecting only a default route.", "correct": true },
+        { "text": "NSSA — allows branches to redistribute local routes.", "correct": false },
+        { "text": "Backbone area 0 — all branches should be in the backbone for fastest convergence.", "correct": false }
+      ],
+      "explanation": "With 1,700 branches, LSDB size and SPF computation time are concerns. A **totally stubby area** minimizes the LSDB to local LSAs plus a default route. Since branches typically route all traffic to the hub, they don't need inter-area or external routes."
+    },
+    "rule_format": {
+      "statement": "Use **totally stubby areas** for stub branches — they reduce the LSDB to Types 1 and 2 plus a **single default route**, minimizing memory and SPF overhead on remote routers."
+    }
+  },
+  {
+    "concept_id": "ospf_q02",
+    "topic": "OSPF",
+    "question_text": "OSPF DR/BDR election and priority",
+    "quiz_format": {
+      "question": "Which statement about OSPF DR/BDR election on a broadcast segment is correct?",
+      "options": [
+        { "text": "The DR election is preemptive — a higher-priority router will immediately become DR.", "correct": false },
+        { "text": "The DR election is non-preemptive — the current DR stays until it fails, even if a higher-priority router joins.", "correct": true },
+        { "text": "DR election occurs on point-to-point links.", "correct": false },
+        { "text": "A priority of 255 always forces a new election.", "correct": false }
+      ],
+      "explanation": "OSPF DR/BDR election is **non-preemptive**. Once a DR is elected, it remains DR until its interface goes down, even if a router with a higher priority joins the segment. To force a new election, the OSPF process must be restarted on the current DR. **Priority 0** prevents a router from becoming DR/BDR."
+    },
+    "scenario_format": {
+      "question": "At a Ferguson DC, a new high-performance router is added to an existing VLAN running OSPF. Despite having the highest priority, it becomes a DROther. Why?",
+      "options": [
+        { "text": "Its router-ID is lower than the current DR.", "correct": false },
+        { "text": "OSPF DR election is non-preemptive; the existing DR will hold the role until it fails.", "correct": true },
+        { "text": "The network type is configured as point-to-multipoint.", "correct": false },
+        { "text": "The new router's OSPF process ID does not match.", "correct": false }
+      ],
+      "explanation": "OSPF DR election is **non-preemptive**, meaning the incumbent DR retains its role regardless of new routers with higher priority. To force the desired outcome, you would need to **restart OSPF on the current DR** or schedule a maintenance window to reset adjacencies."
+    },
+    "rule_format": {
+      "statement": "OSPF DR/BDR election is **non-preemptive** — a higher-priority router joining the segment will not displace the existing DR until it fails or OSPF is cleared."
+    }
+  },
+  {
+    "concept_id": "ospf_q03",
+    "topic": "OSPF",
+    "question_text": "OSPF adjacency troubleshooting — MTU mismatch",
+    "quiz_format": {
+      "question": "Two OSPF routers on the same subnet are stuck in the ExStart/Exchange state. What is the most common cause?",
+      "options": [
+        { "text": "Mismatched OSPF hello timers.", "correct": false },
+        { "text": "Mismatched MTU values on the connecting interfaces.", "correct": true },
+        { "text": "Mismatched OSPF process IDs.", "correct": false },
+        { "text": "Duplicate router IDs.", "correct": false }
+      ],
+      "explanation": "An adjacency stuck in **ExStart/Exchange** typically indicates an **MTU mismatch**. During DBD (Database Description) exchange, OSPF includes the interface MTU; if it doesn't match, the neighbor rejects the packet. Mismatched **hello/dead timers** would prevent the neighbor from reaching Two-Way state at all."
+    },
+    "scenario_format": {
+      "question": "A Ferguson branch router was upgraded and its WAN interface is stuck in ExStart with the hub router. Hellos are exchanged successfully. What should you check?",
+      "options": [
+        { "text": "The OSPF area configuration on both sides.", "correct": false },
+        { "text": "The MTU settings on both WAN interfaces — a mismatch blocks DBD exchange.", "correct": true },
+        { "text": "Whether passive-interface is configured on the hub.", "correct": false },
+        { "text": "Whether the branch is in a stub area.", "correct": false }
+      ],
+      "explanation": "Since hellos succeed (reaching Two-Way), the issue is in **DBD exchange**. The most common cause is an **MTU mismatch** — often introduced when one side is reconfigured with a different MTU (e.g., 1500 vs 9000 or a tunneled MTU). The command **ip ospf mtu-ignore** can work around it, but fixing the MTU is the proper solution."
+    },
+    "rule_format": {
+      "statement": "OSPF stuck in **ExStart/Exchange** = almost always an **MTU mismatch**. Hellos succeed (timers and area match), but DBD packets are rejected because the advertised MTU doesn't agree."
+    }
+  },
+  {
+    "concept_id": "ospf_q04",
+    "topic": "OSPF",
+    "question_text": "OSPF network types and timer defaults",
+    "quiz_format": {
+      "question": "What are the default OSPF hello and dead timers on a broadcast network type?",
+      "options": [
+        { "text": "Hello 30s, Dead 120s.", "correct": false },
+        { "text": "Hello 10s, Dead 40s.", "correct": true },
+        { "text": "Hello 5s, Dead 20s.", "correct": false },
+        { "text": "Hello 10s, Dead 30s.", "correct": false }
+      ],
+      "explanation": "On **broadcast** and **point-to-point** network types, the default hello timer is **10 seconds** and the dead timer is **40 seconds** (4x hello). On **NBMA** and **point-to-multipoint non-broadcast** types, the defaults are **30/120 seconds**. Timer mismatches prevent neighbor formation."
+    },
+    "scenario_format": {
+      "question": "A Ferguson branch connects to the hub via a Frame Relay link configured as OSPF point-to-point on the hub but NBMA on the branch. Neighbors never form. What is the first thing to verify?",
+      "options": [
+        { "text": "That the OSPF areas match on both sides.", "correct": false },
+        { "text": "That the hello and dead timers match — point-to-point uses 10/40s while NBMA uses 30/120s.", "correct": true },
+        { "text": "That DR/BDR election is configured correctly.", "correct": false },
+        { "text": "That the OSPF cost is the same on both interfaces.", "correct": false }
+      ],
+      "explanation": "Different OSPF **network types** have different default timers. **Point-to-point** defaults to 10/40s while **NBMA** defaults to 30/120s. Since these don't match, hellos are never acknowledged within the dead interval. The fix is to make the **network types consistent** on both ends."
+    },
+    "rule_format": {
+      "statement": "OSPF **broadcast/point-to-point** defaults: Hello 10s, Dead 40s. **NBMA**: Hello 30s, Dead 120s. Mismatched network types cause **timer mismatches** that silently prevent adjacency formation."
+    }
+  },
+  {
+    "concept_id": "ospf_q05",
+    "topic": "OSPF",
+    "question_text": "OSPF area 0 and virtual links",
+    "quiz_format": {
+      "question": "When is an OSPF virtual link required?",
+      "options": [
+        { "text": "When two routers in the same area cannot form an adjacency.", "correct": false },
+        { "text": "When a non-backbone area does not have a direct physical connection to area 0.", "correct": true },
+        { "text": "When the DR on a segment fails.", "correct": false },
+        { "text": "When redistributing external routes into OSPF.", "correct": false }
+      ],
+      "explanation": "OSPF requires all areas to connect to **area 0** (backbone). If an area is disconnected from area 0 due to network design, a **virtual link** can extend the backbone through a transit area. Virtual links are configured between two **ABRs** — one on the disconnected area's border and one on area 0's border."
+    },
+    "scenario_format": {
+      "question": "Ferguson acquires a regional distributor whose OSPF area 10 connects to Ferguson's area 20 but has no direct link to area 0. How can inter-area routing be restored?",
+      "options": [
+        { "text": "Redistribute area 10 routes into area 0 using a route-map.", "correct": false },
+        { "text": "Configure a virtual link through area 20 to extend area 0 to the ABR serving area 10.", "correct": true },
+        { "text": "Convert area 10 into a stub area.", "correct": false },
+        { "text": "Add a static route on all area 0 routers pointing to area 10 prefixes.", "correct": false }
+      ],
+      "explanation": "A **virtual link** through the transit area (area 20) logically extends the backbone to the ABR connecting area 10. This is the correct OSPF mechanism for areas that cannot directly connect to **area 0**. Virtual links are a temporary design fix — a physical link to area 0 is preferred long-term."
+    },
+    "rule_format": {
+      "statement": "Every OSPF area must connect to **area 0**. When physical connectivity is impossible, a **virtual link** through a transit area extends the backbone — but treat it as a temporary fix, not a design goal."
+    }
+  },
+  {
+    "concept_id": "ospf_q06",
+    "topic": "OSPF",
+    "question_text": "OSPF NSSA and Type 7 LSA translation",
+    "quiz_format": {
+      "question": "What distinguishes an NSSA from a standard stub area?",
+      "options": [
+        { "text": "NSSA allows Type 5 external LSAs.", "correct": false },
+        { "text": "NSSA permits redistribution into OSPF via Type 7 LSAs, which the ABR translates to Type 5.", "correct": true },
+        { "text": "NSSA blocks all inter-area routes.", "correct": false },
+        { "text": "NSSA does not require an ABR.", "correct": false }
+      ],
+      "explanation": "An **NSSA (Not-So-Stubby Area)** blocks Type 5 LSAs like a stub area but allows local redistribution using **Type 7 LSAs**. The ABR then translates these Type 7 LSAs into **Type 5** for flooding into the rest of the OSPF domain. This is useful when a remote site has locally connected networks that need to be redistributed."
+    },
+    "scenario_format": {
+      "question": "A Ferguson branch office runs a local POS system on a directly connected network that must be advertised into OSPF. The branch is in a stub area to minimize LSDB size. The POS subnet cannot be advertised. What change is needed?",
+      "options": [
+        { "text": "Convert the stub area to a standard area.", "correct": false },
+        { "text": "Convert the stub area to an NSSA, allowing the POS subnet to be redistributed as a Type 7 LSA.", "correct": true },
+        { "text": "Add a static route for the POS subnet on the hub.", "correct": false },
+        { "text": "Move the POS subnet interface into area 0.", "correct": false }
+      ],
+      "explanation": "An **NSSA** allows local redistribution using **Type 7 LSAs** while still blocking external Type 5 LSAs from entering the area. The ABR translates the Type 7 to Type 5 for the rest of the OSPF domain. This provides the stub area benefits while permitting local route injection for the POS network."
+    },
+    "rule_format": {
+      "statement": "**NSSA** = stub area + local redistribution. External routes enter as **Type 7 LSAs**, translated to **Type 5** at the ABR — ideal for branches that need stub benefits but have locally redistributed networks."
+    }
+  },
+  {
+    "concept_id": "ospf_q07",
+    "topic": "OSPF",
+    "question_text": "OSPF SPF throttle timers and convergence tuning",
+    "quiz_format": {
+      "question": "What do the three OSPF SPF throttle timer values (spf-start, spf-hold, spf-max-wait) control?",
+      "options": [
+        { "text": "The intervals between hello packets during convergence.", "correct": false },
+        { "text": "The initial delay before the first SPF run, the hold time between subsequent runs, and the maximum wait time before resetting.", "correct": true },
+        { "text": "The time to wait before declaring a neighbor dead.", "correct": false },
+        { "text": "The LSA flooding interval on broadcast segments.", "correct": false }
+      ],
+      "explanation": "OSPF SPF throttle uses three values: **spf-start** (initial delay before the first SPF calculation), **spf-hold** (minimum interval between subsequent SPF runs, doubling with each trigger), and **spf-max-wait** (maximum interval cap). Tuning these values balances **fast convergence** against **CPU protection** during instability."
+    },
+    "scenario_format": {
+      "question": "Ferguson's core routers experience high CPU during OSPF reconvergence events when multiple branch circuits flap simultaneously. What tuning approach helps?",
+      "options": [
+        { "text": "Reduce the hello timer to 1 second for faster detection.", "correct": false },
+        { "text": "Tune SPF throttle timers — set a short spf-start for fast initial convergence and increase spf-hold/spf-max-wait to dampen repeated calculations.", "correct": true },
+        { "text": "Increase the reference bandwidth to 100 Gbps.", "correct": false },
+        { "text": "Disable SPF and rely on distance-vector behavior.", "correct": false }
+      ],
+      "explanation": "**SPF throttle timers** (e.g., 5 50 5000 ms) allow the first SPF to run quickly (5 ms) while exponentially backing off during repeated triggers. This protects CPU during **mass flap events** while still providing sub-second convergence for the initial failure."
+    },
+    "rule_format": {
+      "statement": "Tune **SPF throttle timers** with a short **spf-start** (fast first convergence) and progressive **spf-hold/spf-max-wait** backoff to protect CPU during mass reconvergence events."
+    }
+  },
+  {
+    "concept_id": "ospf_q08",
+    "topic": "OSPF",
+    "question_text": "OSPF adjacency states and Full state",
+    "quiz_format": {
+      "question": "In what order do OSPF adjacency states progress from initialization to full adjacency?",
+      "options": [
+        { "text": "Down, Init, Two-Way, ExStart, Exchange, Loading, Full.", "correct": true },
+        { "text": "Down, Init, Exchange, ExStart, Two-Way, Loading, Full.", "correct": false },
+        { "text": "Down, Two-Way, Init, ExStart, Loading, Exchange, Full.", "correct": false },
+        { "text": "Down, Init, Two-Way, Loading, Exchange, ExStart, Full.", "correct": false }
+      ],
+      "explanation": "The correct OSPF state progression is: **Down, Init, Two-Way, ExStart, Exchange, Loading, Full**. Two-Way is where DR/BDR election occurs on broadcast segments. ExStart negotiates the master/slave relationship. Exchange is where DBDs are swapped. Loading fetches missing LSAs."
+    },
+    "scenario_format": {
+      "question": "While troubleshooting a Ferguson branch adjacency, you see the neighbor in Two-Way state on a point-to-point link. Is this normal?",
+      "options": [
+        { "text": "Yes — Two-Way is the stable state for DROther routers.", "correct": false },
+        { "text": "No — on a point-to-point link, all neighbors should reach Full state; Two-Way indicates a problem progressing to ExStart.", "correct": true },
+        { "text": "Yes — Two-Way means routing is functional.", "correct": false },
+        { "text": "No — Two-Way only occurs on NBMA networks.", "correct": false }
+      ],
+      "explanation": "On **point-to-point** links, there is no DR/BDR election; all neighbors should progress to **Full**. Two-Way is only a normal stable state for **DROther** routers on broadcast segments. A neighbor stuck at Two-Way on a point-to-point link suggests something is preventing the **ExStart/Exchange** process."
+    },
+    "rule_format": {
+      "statement": "On **point-to-point** links, all OSPF neighbors must reach **Full** state. Two-Way as a stable state is only normal for **DROther** pairs on broadcast segments."
+    }
+  },
+  {
+    "concept_id": "ospf_q09",
+    "topic": "OSPF",
+    "question_text": "OSPF reference bandwidth and cost calculation",
+    "quiz_format": {
+      "question": "The default OSPF reference bandwidth is 100 Mbps. What problem does this create for modern networks?",
+      "options": [
+        { "text": "It assigns a cost of 0 to all links.", "correct": false },
+        { "text": "All interfaces 100 Mbps and faster receive the same cost of 1, making OSPF unable to distinguish between Fast Ethernet, Gigabit, and 10 Gigabit links.", "correct": true },
+        { "text": "It causes SPF to run continuously.", "correct": false },
+        { "text": "It prevents redistribution from BGP.", "correct": false }
+      ],
+      "explanation": "OSPF cost = **reference bandwidth / interface bandwidth**. With the default 100 Mbps reference, FastEthernet (100 Mbps), GigE (1 Gbps), and 10 GigE all calculate to a cost of **1** (integer rounding). Using **auto-cost reference-bandwidth** with a higher value (e.g., 100000 for 100 Gbps) restores meaningful cost differentiation."
+    },
+    "scenario_format": {
+      "question": "Ferguson's DC has 10 GigE and 100 GigE links, but OSPF treats them identically. Traffic takes suboptimal paths through slower links. What should be configured?",
+      "options": [
+        { "text": "Manually set ip ospf cost on every interface.", "correct": false },
+        { "text": "Set auto-cost reference-bandwidth to 100000 (100 Gbps) on all routers in the OSPF domain.", "correct": true },
+        { "text": "Change all links to point-to-point network type.", "correct": false },
+        { "text": "Enable OSPF fast-reroute to prefer higher-bandwidth paths.", "correct": false }
+      ],
+      "explanation": "Setting **auto-cost reference-bandwidth 100000** makes 10 GigE cost 10 and 100 GigE cost 1, restoring meaningful differentiation. This must be configured on **all routers** in the OSPF domain to maintain consistent cost calculations and prevent routing loops."
+    },
+    "rule_format": {
+      "statement": "Set **auto-cost reference-bandwidth** to your highest link speed across **all OSPF routers** — the default 100 Mbps collapses all modern link speeds to the same cost of 1."
+    }
+  },
+  {
+    "concept_id": "ospf_q10",
+    "topic": "OSPF",
+    "question_text": "OSPF authentication and security",
+    "quiz_format": {
+      "question": "Which OSPF authentication type provides the strongest protection against spoofed OSPF packets?",
+      "options": [
+        { "text": "Type 0 — null authentication.", "correct": false },
+        { "text": "Type 1 — plaintext password.", "correct": false },
+        { "text": "Type 2 — MD5 cryptographic authentication.", "correct": true },
+        { "text": "Type 3 — SHA-256 authentication.", "correct": false }
+      ],
+      "explanation": "OSPF supports **Type 0 (null)**, **Type 1 (plaintext)**, and **Type 2 (MD5)**. MD5 authentication provides **cryptographic hashing** of OSPF packets, preventing spoofing and replay attacks. Plaintext sends the password in the clear. Newer IOS versions support **SHA-256** via the key-chain mechanism, but the standard types are 0, 1, and 2."
+    },
+    "scenario_format": {
+      "question": "Ferguson's security team requires OSPF authentication on all WAN-facing interfaces to prevent rogue route injection at branch sites. What is the recommended implementation?",
+      "options": [
+        { "text": "Type 1 plaintext authentication — simple to manage.", "correct": false },
+        { "text": "Type 2 MD5 authentication with area-level enforcement to ensure all routers authenticate.", "correct": true },
+        { "text": "Passive-interface on all WAN interfaces.", "correct": false },
+        { "text": "ACL filtering of OSPF multicast (224.0.0.5/6).", "correct": false }
+      ],
+      "explanation": "**MD5 authentication** (Type 2) ensures all OSPF packets are cryptographically verified. Configuring it at the **area level** forces all interfaces in that area to authenticate, preventing an engineer from accidentally leaving an interface unprotected. This is a key control for **SOX compliance** at a company like Ferguson."
+    },
+    "rule_format": {
+      "statement": "Deploy **OSPF MD5 authentication** (Type 2) at the area level on all WAN-facing segments — it prevents rogue route injection and supports **change control/compliance** requirements."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q01",
+    "topic": "DMVPN",
+    "question_text": "DMVPN Phase 2 vs Phase 3 spoke-to-spoke behavior",
+    "quiz_format": {
+      "question": "What is the primary difference between DMVPN Phase 2 and Phase 3 for spoke-to-spoke communication?",
+      "options": [
+        { "text": "Phase 2 does not support spoke-to-spoke tunnels at all.", "correct": false },
+        { "text": "Phase 3 uses NHRP redirect and shortcut to allow spoke-to-spoke tunnels even with summarized routing, while Phase 2 requires specific routes.", "correct": true },
+        { "text": "Phase 3 encrypts traffic while Phase 2 does not.", "correct": false },
+        { "text": "Phase 3 eliminates the need for a hub.", "correct": false }
+      ],
+      "explanation": "In **Phase 2**, spoke-to-spoke tunnels require the spoke to have a specific route for the destination — summarization at the hub breaks spoke-to-spoke. **Phase 3** introduces **NHRP redirect** (hub-side) and **NHRP shortcut** (spoke-side), allowing the hub to redirect spokes to build direct tunnels even when the hub advertises only summary routes."
+    },
+    "scenario_format": {
+      "question": "Ferguson runs DMVPN with 1,700 branch spokes. The hub advertises a summary route for all branch subnets. Branches need to send voice traffic directly to each other without hairpinning through the hub. Which DMVPN phase is required?",
+      "options": [
+        { "text": "Phase 1 with static NHRP mappings.", "correct": false },
+        { "text": "Phase 3 with NHRP redirect on the hub and NHRP shortcut on spokes.", "correct": true },
+        { "text": "Phase 2 with full routing tables on every spoke.", "correct": false },
+        { "text": "Phase 1 with GRE keepalives.", "correct": false }
+      ],
+      "explanation": "With summarized routing at the hub, **Phase 3** is required. The hub sends an **NHRP redirect** to the source spoke, which installs an **NHRP shortcut** and builds a direct tunnel to the destination spoke. This enables spoke-to-spoke communication without carrying 1,700 specific routes on every spoke."
+    },
+    "rule_format": {
+      "statement": "**DMVPN Phase 3** = summary routing at the hub + spoke-to-spoke tunnels via **NHRP redirect/shortcut**. Phase 2 requires specific routes on spokes, which doesn't scale to 1,700 branches."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q02",
+    "topic": "DMVPN",
+    "question_text": "NHRP resolution and registration",
+    "quiz_format": {
+      "question": "What is the role of NHRP in a DMVPN deployment?",
+      "options": [
+        { "text": "It encrypts tunnel traffic between spokes.", "correct": false },
+        { "text": "It maps tunnel (logical) addresses to NBMA (physical/underlay) addresses, enabling dynamic tunnel creation.", "correct": true },
+        { "text": "It replaces the IGP routing protocol inside the tunnel.", "correct": false },
+        { "text": "It performs QoS classification on tunnel packets.", "correct": false }
+      ],
+      "explanation": "**NHRP (Next Hop Resolution Protocol)** provides the mapping between **tunnel IP addresses** and **NBMA (underlay) addresses** (i.e., the public IPs of the GRE endpoints). Spokes register their mappings with the hub (NHS), and resolution requests allow spokes to discover each other's physical addresses for direct tunnel creation."
+    },
+    "scenario_format": {
+      "question": "A new Ferguson branch spoke registers with the DMVPN hub but cannot build spoke-to-spoke tunnels. NHRP resolution replies from the hub contain stale mappings. What should you check?",
+      "options": [
+        { "text": "Whether the IPSec transform set matches.", "correct": false },
+        { "text": "Whether the NHRP registration timeout and holdtime are too long, causing stale entries to persist after spoke IP changes.", "correct": true },
+        { "text": "Whether the spoke is in Phase 1.", "correct": false },
+        { "text": "Whether the hub's GRE tunnel key matches.", "correct": false }
+      ],
+      "explanation": "If a spoke's underlay IP changes (e.g., ISP re-assignment), the hub's **NHRP cache** may hold the old mapping until the **registration timer** expires. Reducing the **NHRP holdtime** ensures stale entries are purged faster. The command **ip nhrp holdtime** controls this on the spoke, and **ip nhrp registration timeout** controls re-registration frequency."
+    },
+    "rule_format": {
+      "statement": "**NHRP** maps tunnel IPs to underlay IPs — tune **holdtime** and **registration timeout** to ensure stale mappings are purged quickly when branch ISP addresses change."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q03",
+    "topic": "DMVPN",
+    "question_text": "DMVPN with IPSec tunnel protection",
+    "quiz_format": {
+      "question": "What is the advantage of using 'tunnel protection ipsec profile' over a traditional crypto map in DMVPN?",
+      "options": [
+        { "text": "It provides stronger encryption algorithms.", "correct": false },
+        { "text": "It dynamically encrypts all GRE tunnel traffic without needing ACL-based crypto maps, and supports spoke-to-spoke SA creation.", "correct": true },
+        { "text": "It eliminates the need for IKE negotiation.", "correct": false },
+        { "text": "It replaces NHRP for address resolution.", "correct": false }
+      ],
+      "explanation": "**Tunnel protection** applies an IPSec profile directly to the GRE tunnel interface, encrypting all traffic through it without crypto map ACLs. It automatically creates **IPSec SAs** for spoke-to-spoke tunnels as NHRP resolves them. This is simpler and more scalable than managing crypto maps with explicit peer definitions."
+    },
+    "scenario_format": {
+      "question": "Ferguson is migrating from legacy site-to-site VPNs with crypto maps to DMVPN. The team wants to ensure all branch-to-branch traffic is encrypted without managing individual crypto ACLs for 1,700 sites. What approach is recommended?",
+      "options": [
+        { "text": "Create a crypto map with 1,700 peer entries.", "correct": false },
+        { "text": "Use tunnel protection with an IPSec profile on the mGRE interface — SAs are created dynamically as NHRP resolves spoke addresses.", "correct": true },
+        { "text": "Rely on GRE encapsulation alone for confidentiality.", "correct": false },
+        { "text": "Deploy a separate VPN concentrator for encryption.", "correct": false }
+      ],
+      "explanation": "**Tunnel protection ipsec profile** on the mGRE interface provides automatic encryption for all DMVPN traffic. **IPSec SAs** are built dynamically when NHRP resolves a spoke's address, eliminating the need to define crypto maps or ACLs for each of 1,700 peers."
+    },
+    "rule_format": {
+      "statement": "Use **tunnel protection ipsec profile** on DMVPN mGRE interfaces — it dynamically creates IPSec SAs as NHRP resolves peers, eliminating per-site crypto map management."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q04",
+    "topic": "DMVPN",
+    "question_text": "DMVPN dual-hub redundancy design",
+    "quiz_format": {
+      "question": "In a DMVPN dual-hub design, how should spokes be configured for redundancy?",
+      "options": [
+        { "text": "Each spoke configures two tunnel interfaces, one to each hub, with routing metrics to control primary/backup preference.", "correct": true },
+        { "text": "Spokes configure a single tunnel with two NHRP servers and automatic failover.", "correct": false },
+        { "text": "The backup hub is configured as a spoke and promotes itself during failure.", "correct": false },
+        { "text": "Dual hubs share a virtual IP via HSRP on the tunnel interface.", "correct": false }
+      ],
+      "explanation": "The standard approach uses **two tunnel interfaces** on each spoke, each pointing to a different hub as the **NHS (Next Hop Server)**. The IGP (typically EIGRP or OSPF) controls path preference through **metrics or administrative distance**. During a hub failure, the routing protocol converges to the backup tunnel."
+    },
+    "scenario_format": {
+      "question": "Ferguson deploys DMVPN hubs in the primary and DR data centers. If the primary DC hub fails, all 1,700 branches must failover. What is the recommended design?",
+      "options": [
+        { "text": "Configure each spoke with two tunnel interfaces (Tunnel0 to primary hub, Tunnel1 to DR hub) and use EIGRP with higher delay on Tunnel1 for backup preference.", "correct": true },
+        { "text": "Use a single tunnel with NHRP pointing to both hubs simultaneously.", "correct": false },
+        { "text": "Deploy VRRP between the two hubs on the tunnel interface.", "correct": false },
+        { "text": "Rely on ISP failover rather than DMVPN redundancy.", "correct": false }
+      ],
+      "explanation": "**Dual tunnel interfaces** with the routing protocol controlling preference is the proven DMVPN redundancy model. Setting **higher EIGRP delay** on Tunnel1 (DR hub) makes it the backup. When the primary hub fails, EIGRP converges to the DR hub tunnel within seconds across all 1,700 branches."
+    },
+    "rule_format": {
+      "statement": "DMVPN redundancy = **two tunnel interfaces per spoke**, one per hub, with the **IGP controlling primary/backup** preference via metrics — never rely on a single hub for 1,700 branches."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q05",
+    "topic": "DMVPN",
+    "question_text": "DMVPN tunnel key and GRE configuration",
+    "quiz_format": {
+      "question": "What happens if the GRE tunnel key does not match between a DMVPN hub and spoke?",
+      "options": [
+        { "text": "The tunnel forms but traffic is not encrypted.", "correct": false },
+        { "text": "NHRP registration fails because the GRE key is embedded in the tunnel header and packets are silently dropped.", "correct": true },
+        { "text": "The spoke automatically renegotiates the key.", "correct": false },
+        { "text": "The tunnel forms with degraded throughput.", "correct": false }
+      ],
+      "explanation": "The **GRE tunnel key** is embedded in the GRE header. If the hub and spoke have mismatched keys, the receiving end silently drops the packets because the key does not match its expected value. **NHRP registration** never succeeds, and the spoke appears to be unreachable. This is a common DMVPN misconfiguration."
+    },
+    "scenario_format": {
+      "question": "A Ferguson technician deploys a new branch router from a template. The DMVPN tunnel comes up but the spoke cannot register with the hub. Debug NHRP shows no registration requests received at the hub. What is a likely misconfiguration?",
+      "options": [
+        { "text": "The OSPF area is misconfigured.", "correct": false },
+        { "text": "The GRE tunnel key on the spoke does not match the hub's key, causing packets to be silently dropped.", "correct": true },
+        { "text": "The spoke's loopback address is wrong.", "correct": false },
+        { "text": "The spoke needs a static route to the hub's tunnel IP.", "correct": false }
+      ],
+      "explanation": "When the hub receives **zero registration requests**, the issue is at the GRE/transport level, not NHRP. A mismatched **tunnel key** causes the hub to drop the spoke's GRE packets silently. Verify the tunnel key matches on both hub and spoke, along with the tunnel source and tunnel mode gre multipoint configuration."
+    },
+    "rule_format": {
+      "statement": "A mismatched **GRE tunnel key** causes silent packet drops — if the hub sees no NHRP registrations, verify the **tunnel key, tunnel source**, and **tunnel mode** before troubleshooting NHRP."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q06",
+    "topic": "DMVPN",
+    "question_text": "DMVPN with EIGRP split-horizon considerations",
+    "quiz_format": {
+      "question": "Why must EIGRP split-horizon be disabled on the DMVPN hub's tunnel interface?",
+      "options": [
+        { "text": "To allow the hub to learn routes from all spokes.", "correct": false },
+        { "text": "To allow the hub to re-advertise spoke routes back out the same mGRE interface to other spokes.", "correct": true },
+        { "text": "To prevent routing loops between dual hubs.", "correct": false },
+        { "text": "To enable EIGRP stub routing on spokes.", "correct": false }
+      ],
+      "explanation": "**Split-horizon** prevents a router from advertising routes back out the interface on which they were learned. Since all spokes connect to the hub via the **same mGRE interface**, split-horizon would prevent the hub from sharing Spoke-A's routes with Spoke-B. Disabling it with **no ip split-horizon eigrp** is mandatory."
+    },
+    "scenario_format": {
+      "question": "Ferguson's DMVPN hub runs EIGRP. Branch A can reach the hub but not Branch B, even though both are registered via NHRP. What is the likely issue?",
+      "options": [
+        { "text": "Branch B's NHRP registration has expired.", "correct": false },
+        { "text": "EIGRP split-horizon is enabled on the hub's tunnel interface, preventing spoke-to-spoke route advertisements.", "correct": true },
+        { "text": "Branch B's OSPF area does not match.", "correct": false },
+        { "text": "The hub is configured for DMVPN Phase 1.", "correct": false }
+      ],
+      "explanation": "With **EIGRP split-horizon enabled** (the default), the hub learns Branch B's route on the tunnel interface but cannot advertise it back out the same interface to Branch A. Disabling split-horizon with **no ip split-horizon eigrp [ASN]** on the hub's tunnel interface resolves inter-spoke routing."
+    },
+    "rule_format": {
+      "statement": "Always disable **EIGRP split-horizon** on the DMVPN hub's mGRE interface — without it, spoke routes learned on the tunnel cannot be re-advertised to other spokes."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q07",
+    "topic": "DMVPN",
+    "question_text": "DMVPN troubleshooting — IPSec SA failures",
+    "quiz_format": {
+      "question": "A DMVPN tunnel is up (GRE and NHRP work), but traffic is being dropped. 'show crypto ipsec sa' shows zero encrypted/decrypted packets. What is the most likely issue?",
+      "options": [
+        { "text": "The NHRP network-id does not match.", "correct": false },
+        { "text": "The IKE or IPSec proposal (transform set, DH group, or pre-shared key) is mismatched between peers, preventing SA establishment.", "correct": true },
+        { "text": "The tunnel MTU is too high.", "correct": false },
+        { "text": "EIGRP is not advertising the spoke's networks.", "correct": false }
+      ],
+      "explanation": "If GRE and NHRP work but the **IPSec SA** shows zero packets, IKE negotiation is failing. Check **Phase 1** (ISAKMP policy: encryption, hash, DH group, authentication method) and **Phase 2** (transform set: encryption and integrity algorithms). A **pre-shared key mismatch** is the most frequent cause in branch deployments."
+    },
+    "scenario_format": {
+      "question": "A newly deployed Ferguson branch can ping the hub's tunnel IP but all production traffic is dropped. The tunnel protection IPSec profile shows no active SAs. What is the first troubleshooting step?",
+      "options": [
+        { "text": "Check whether the branch's ISP is blocking GRE.", "correct": false },
+        { "text": "Verify the IKE policy and pre-shared key match between the spoke and hub — a mismatch prevents IPSec SA formation.", "correct": true },
+        { "text": "Restart OSPF on the branch router.", "correct": false },
+        { "text": "Increase the tunnel MTU.", "correct": false }
+      ],
+      "explanation": "The spoke can reach the hub (pings work over GRE), but the **IPSec layer** is not encrypting. This means IKE negotiation is failing. Verify the **ISAKMP policy** (encryption, hash, lifetime, DH group) and **pre-shared key** match on both ends. Use **debug crypto isakmp** to see the specific mismatch."
+    },
+    "rule_format": {
+      "statement": "GRE works + IPSec SA shows zero packets = **IKE negotiation failure**. Check the **ISAKMP policy, transform set, and pre-shared key** match between hub and spoke."
+    }
+  },
+  {
+    "concept_id": "dmvpn_q08",
+    "topic": "DMVPN",
+    "question_text": "DMVPN Phase 1 characteristics and limitations",
+    "quiz_format": {
+      "question": "What is the key limitation of DMVPN Phase 1?",
+      "options": [
+        { "text": "It does not support IPSec encryption.", "correct": false },
+        { "text": "All spoke-to-spoke traffic must traverse the hub because spokes cannot build direct tunnels.", "correct": true },
+        { "text": "It cannot scale beyond 50 spokes.", "correct": false },
+        { "text": "It requires static routing on all spokes.", "correct": false }
+      ],
+      "explanation": "**DMVPN Phase 1** is a hub-and-spoke-only topology. Spokes register with the hub but cannot resolve other spokes' NBMA addresses, so all inter-spoke traffic **hairpins through the hub**. This is the simplest phase but creates a bandwidth bottleneck at the hub for spoke-to-spoke communication."
+    },
+    "scenario_format": {
+      "question": "Ferguson initially deployed DMVPN Phase 1. As branch-to-branch voice traffic grows, the hub's WAN bandwidth becomes saturated. What is the root cause and solution?",
+      "options": [
+        { "text": "The hub needs more CPU — upgrade the router.", "correct": false },
+        { "text": "Phase 1 forces all spoke-to-spoke traffic through the hub. Migrating to Phase 2 or Phase 3 enables direct spoke-to-spoke tunnels.", "correct": true },
+        { "text": "Enable QoS on the hub to prioritize voice.", "correct": false },
+        { "text": "Add more NHRP servers to distribute load.", "correct": false }
+      ],
+      "explanation": "In **Phase 1**, spoke-to-spoke traffic traverses the hub, doubling bandwidth consumption. Migrating to **Phase 3** (preferred at scale) allows spokes to build **direct tunnels** via NHRP shortcuts, offloading the hub. Phase 3 also supports route summarization, critical for 1,700 branches."
+    },
+    "rule_format": {
+      "statement": "**DMVPN Phase 1** = hub-and-spoke only; all spoke-to-spoke traffic **hairpins through the hub**. Migrate to **Phase 3** for direct spoke-to-spoke tunnels with summarized routing at scale."
+    }
+  },
+  {
+    "concept_id": "mpls_q01",
+    "topic": "MPLS",
+    "question_text": "MPLS CE/PE/P router roles",
+    "quiz_format": {
+      "question": "In an MPLS L3 VPN architecture, which router maintains VRF instances and exchanges routes with the customer?",
+      "options": [
+        { "text": "The P (Provider) router.", "correct": false },
+        { "text": "The PE (Provider Edge) router.", "correct": true },
+        { "text": "The CE (Customer Edge) router.", "correct": false },
+        { "text": "The route reflector.", "correct": false }
+      ],
+      "explanation": "The **PE (Provider Edge)** router is where customer VRFs are configured. It peers with the CE via eBGP, OSPF, or static routes and uses **MP-BGP** to exchange VPNv4 routes with other PEs. The **P (Provider)** router only performs label switching — it has no knowledge of customer routes. The **CE** is the customer's router."
+    },
+    "scenario_format": {
+      "question": "Ferguson connects to an MPLS provider at each branch. Ferguson's branch router peers via eBGP with the provider's router that holds Ferguson's VRF. What role does the provider's router play?",
+      "options": [
+        { "text": "P router — it performs label switching.", "correct": false },
+        { "text": "PE router — it maintains the customer VRF and exchanges routes with the CE.", "correct": true },
+        { "text": "CE router — it connects to the customer.", "correct": false },
+        { "text": "ASBR — it connects two provider networks.", "correct": false }
+      ],
+      "explanation": "The provider's router that holds Ferguson's **VRF** and peers with Ferguson's branch router (CE) is the **PE router**. It translates between the customer's routing domain and the MPLS provider's **VPNv4** backbone. Ferguson's branch router is the **CE**."
+    },
+    "rule_format": {
+      "statement": "**PE** routers hold customer VRFs and bridge between CE routing (eBGP/OSPF) and the MPLS backbone (**MP-BGP VPNv4**). **P** routers only label-switch — they never see customer routes."
+    }
+  },
+  {
+    "concept_id": "mpls_q02",
+    "topic": "MPLS",
+    "question_text": "MPLS label operations: push, swap, pop",
+    "quiz_format": {
+      "question": "What are the three fundamental MPLS label operations?",
+      "options": [
+        { "text": "Encapsulate, route, decapsulate.", "correct": false },
+        { "text": "Push (impose), swap (exchange), and pop (remove).", "correct": true },
+        { "text": "Tag, forward, untag.", "correct": false },
+        { "text": "Label, lookup, strip.", "correct": false }
+      ],
+      "explanation": "MPLS uses three label operations: **Push** (impose a label onto a packet entering the MPLS domain), **Swap** (exchange one label for another at transit P routers), and **Pop** (remove the label as the packet exits the MPLS domain). **Penultimate Hop Popping (PHP)** has the second-to-last router pop the label to reduce the egress PE's workload."
+    },
+    "scenario_format": {
+      "question": "Ferguson's traffic traverses an MPLS provider backbone. At the second-to-last provider router before the destination PE, the top label is removed. What is this behavior called?",
+      "options": [
+        { "text": "Label stripping.", "correct": false },
+        { "text": "Penultimate Hop Popping (PHP) — the second-to-last hop removes the top label so the egress PE doesn't need to perform two lookups.", "correct": true },
+        { "text": "Label aggregation.", "correct": false },
+        { "text": "Implicit null tagging.", "correct": false }
+      ],
+      "explanation": "**Penultimate Hop Popping (PHP)** occurs when the router before the egress PE pops the transport label. The egress PE then only needs to perform an IP lookup (or VPN label lookup) instead of both a label swap and IP lookup. The egress PE signals this by advertising an **implicit null** label to its penultimate hop."
+    },
+    "rule_format": {
+      "statement": "MPLS label operations: **push** at ingress, **swap** at transit, **pop** at egress. **PHP** optimizes the egress PE by having the penultimate hop pop the transport label early."
+    }
+  },
+  {
+    "concept_id": "mpls_q03",
+    "topic": "MPLS",
+    "question_text": "MP-BGP and VPNv4 address family",
+    "quiz_format": {
+      "question": "What is the purpose of the VPNv4 address family in MP-BGP?",
+      "options": [
+        { "text": "To encrypt MPLS label traffic between PEs.", "correct": false },
+        { "text": "To carry customer IPv4 prefixes with a Route Distinguisher, allowing overlapping address spaces between different VPNs.", "correct": true },
+        { "text": "To replace LDP for label distribution.", "correct": false },
+        { "text": "To provide IPv4 multicast support in MPLS.", "correct": false }
+      ],
+      "explanation": "**VPNv4** prefixes consist of an 8-byte **Route Distinguisher (RD)** prepended to a 4-byte IPv4 prefix, creating a unique 12-byte address. This allows **MP-BGP** to carry routes from multiple customers who may use the same private IP ranges (e.g., 10.0.0.0/8) without conflict. RDs make each prefix globally unique within the provider's network."
+    },
+    "scenario_format": {
+      "question": "Ferguson and another provider customer both use 10.0.0.0/8 internally. The MPLS provider carries both customers' routes across the same backbone. How does MP-BGP keep them separate?",
+      "options": [
+        { "text": "By using different OSPF areas for each customer.", "correct": false },
+        { "text": "By prepending a unique Route Distinguisher to each customer's prefixes in the VPNv4 address family.", "correct": true },
+        { "text": "By assigning different MPLS labels to each customer at every hop.", "correct": false },
+        { "text": "By maintaining separate physical links for each customer.", "correct": false }
+      ],
+      "explanation": "The **Route Distinguisher (RD)** makes each customer's prefix unique within the VPNv4 table. Ferguson's 10.0.0.0/8 might become **65000:1:10.0.0.0/8** while the other customer's becomes **65000:2:10.0.0.0/8**. **Route Targets (RTs)** then control which VRFs import/export which prefixes."
+    },
+    "rule_format": {
+      "statement": "**VPNv4** = Route Distinguisher + IPv4 prefix. The **RD** makes overlapping addresses unique in MP-BGP; **Route Targets** control which VRFs import/export which routes."
+    }
+  },
+  {
+    "concept_id": "mpls_q04",
+    "topic": "MPLS",
+    "question_text": "Route Targets vs Route Distinguishers",
+    "quiz_format": {
+      "question": "What is the difference between a Route Distinguisher (RD) and a Route Target (RT) in MPLS L3 VPN?",
+      "options": [
+        { "text": "RD determines traffic forwarding priority; RT determines label allocation.", "correct": false },
+        { "text": "RD makes prefixes unique in the VPNv4 table; RT controls which VRFs import and export routes.", "correct": true },
+        { "text": "RD is set by the CE; RT is set by the PE.", "correct": false },
+        { "text": "They are interchangeable and serve the same function.", "correct": false }
+      ],
+      "explanation": "The **Route Distinguisher** is a prefix modifier that creates uniqueness in the VPNv4 table — it is purely a disambiguation mechanism. The **Route Target** is a BGP extended community that controls **route import/export policy** between VRFs. Multiple VRFs can share an RT to create shared-service topologies (e.g., hub-and-spoke or full-mesh VPN)."
+    },
+    "scenario_format": {
+      "question": "Ferguson wants branch VRFs to exchange routes with each other (full-mesh) but also import routes from a shared-services VRF (internet gateway, DNS). How should Route Targets be configured?",
+      "options": [
+        { "text": "Use the same RD for all VRFs.", "correct": false },
+        { "text": "Assign one RT for branch-to-branch (import/export on all branch VRFs) and a second RT for shared-services (exported by shared-services VRF, imported by branch VRFs).", "correct": true },
+        { "text": "Use unique RTs per branch — no overlapping allowed.", "correct": false },
+        { "text": "Configure static routes instead of RTs for shared services.", "correct": false }
+      ],
+      "explanation": "**Route Targets** can be layered. All branch VRFs export/import a common RT (e.g., 65000:100) for full-mesh connectivity. The shared-services VRF exports a second RT (e.g., 65000:999) that all branch VRFs import. This creates a **hub-and-spoke overlay** for shared services on top of the branch full mesh."
+    },
+    "rule_format": {
+      "statement": "**RD** = uniqueness (no policy impact). **RT** = route import/export policy. Layer multiple RTs on a VRF to build complex topologies like **full-mesh + shared-services** without route leaking."
+    }
+  },
+  {
+    "concept_id": "mpls_q05",
+    "topic": "MPLS",
+    "question_text": "LDP and label distribution",
+    "quiz_format": {
+      "question": "What protocol is most commonly used to distribute transport labels in an MPLS network?",
+      "options": [
+        { "text": "MP-BGP.", "correct": false },
+        { "text": "LDP (Label Distribution Protocol).", "correct": true },
+        { "text": "RSVP-TE.", "correct": false },
+        { "text": "OSPF with opaque LSAs.", "correct": false }
+      ],
+      "explanation": "**LDP (Label Distribution Protocol)** is the most common protocol for distributing transport labels in an MPLS network. It automatically builds **Label Switched Paths (LSPs)** based on the IGP's routing table. **RSVP-TE** is used when traffic engineering is required. **MP-BGP** distributes VPN labels, not transport labels."
+    },
+    "scenario_format": {
+      "question": "Ferguson's MPLS provider reports that traffic between two PE routers is being IP-routed instead of label-switched through the P routers. What should the provider check?",
+      "options": [
+        { "text": "Whether MP-BGP is configured on the P routers.", "correct": false },
+        { "text": "Whether LDP is enabled on the P router interfaces along the path and LDP sessions are established.", "correct": true },
+        { "text": "Whether VRFs are configured on the P routers.", "correct": false },
+        { "text": "Whether the IGP cost is too high.", "correct": false }
+      ],
+      "explanation": "If LDP is not enabled on a **P router's interface**, no label is assigned for that hop, breaking the **Label Switched Path**. The packet falls back to IP forwarding at that point. P routers need **LDP** (not MP-BGP or VRFs) to perform label switching. Verify with **show mpls ldp neighbor** and **show mpls forwarding-table**."
+    },
+    "rule_format": {
+      "statement": "**LDP** distributes transport labels to build LSPs across P routers. If LDP is missing on any interface in the path, the LSP breaks and traffic falls back to **IP forwarding**."
+    }
+  },
+  {
+    "concept_id": "mpls_q06",
+    "topic": "MPLS",
+    "question_text": "MPLS L3 VPN label stack",
+    "quiz_format": {
+      "question": "How many labels are typically in an MPLS L3 VPN packet's label stack?",
+      "options": [
+        { "text": "One — the VPN label.", "correct": false },
+        { "text": "Two — a transport label (top) and a VPN label (bottom).", "correct": true },
+        { "text": "Three — transport, VPN, and QoS labels.", "correct": false },
+        { "text": "One — the transport label only.", "correct": false }
+      ],
+      "explanation": "An MPLS L3 VPN packet carries a **two-label stack**. The **top label** (transport/IGP label) is distributed by LDP and gets the packet across the provider backbone. The **bottom label** (VPN label) is distributed by MP-BGP and tells the egress PE which VRF to place the packet into. PHP removes the top label at the penultimate hop."
+    },
+    "scenario_format": {
+      "question": "Traffic from a Ferguson branch traverses the MPLS provider and arrives at the egress PE. After PHP, only one label remains. What does this remaining label determine?",
+      "options": [
+        { "text": "The output interface on the PE.", "correct": false },
+        { "text": "The VRF into which the packet should be placed for forwarding to the correct customer CE.", "correct": true },
+        { "text": "The QoS treatment for the packet.", "correct": false },
+        { "text": "The return path for the packet.", "correct": false }
+      ],
+      "explanation": "After **PHP** removes the transport label, the remaining **VPN label** tells the egress PE which **VRF** to use for the IP lookup. This ensures Ferguson's traffic is forwarded to Ferguson's CE, not to another customer's CE. The VPN label is assigned by the egress PE and distributed via **MP-BGP**."
+    },
+    "rule_format": {
+      "statement": "MPLS L3 VPN uses a **two-label stack**: the **transport label** (LDP, top) routes across the backbone; the **VPN label** (MP-BGP, bottom) identifies the destination VRF at the egress PE."
+    }
+  },
+  {
+    "concept_id": "mpls_q07",
+    "topic": "MPLS",
+    "question_text": "CE-PE routing protocol options",
+    "quiz_format": {
+      "question": "Which routing protocol is most commonly used between a CE and PE in MPLS L3 VPN deployments, and why?",
+      "options": [
+        { "text": "OSPF — because the PE can redistribute into MP-BGP.", "correct": false },
+        { "text": "eBGP — because it provides clean administrative separation between customer and provider routing domains.", "correct": true },
+        { "text": "RIP — because it is simplest.", "correct": false },
+        { "text": "IS-IS — because it supports MPLS natively.", "correct": false }
+      ],
+      "explanation": "**eBGP** is preferred for CE-PE peering because it naturally separates the customer's routing domain from the provider's. It supports rich policy control, scales well, and avoids the complexity of mutual redistribution (unlike OSPF or EIGRP CE-PE peering). It also allows the PE to carry customer routes natively in **VPNv4** without additional redistribution."
+    },
+    "scenario_format": {
+      "question": "Ferguson's MPLS provider offers eBGP or OSPF for the CE-PE peering at each branch. With 1,700 branches and the need for consistent policy, which should Ferguson choose?",
+      "options": [
+        { "text": "OSPF — it matches Ferguson's internal IGP.", "correct": false },
+        { "text": "eBGP — it provides clean domain separation, consistent policy via route-maps, and avoids complex redistribution.", "correct": true },
+        { "text": "Static routes — simplest at scale.", "correct": false },
+        { "text": "EIGRP — best for Cisco-to-Cisco environments.", "correct": false }
+      ],
+      "explanation": "**eBGP** CE-PE peering gives Ferguson control via **route-maps and prefix-lists** without the complexity of redistributing between the provider's OSPF and MP-BGP. At 1,700 branches, consistent policy application and clean administrative boundaries make eBGP the operationally superior choice."
+    },
+    "rule_format": {
+      "statement": "Use **eBGP** for CE-PE peering in MPLS L3 VPN — it provides clean administrative separation, avoids redistribution complexity, and enables consistent policy at scale via **route-maps**."
+    }
+  },
+  {
+    "concept_id": "mpls_q08",
+    "topic": "MPLS",
+    "question_text": "MPLS VPN troubleshooting with traceroute",
+    "quiz_format": {
+      "question": "Why might a standard IP traceroute fail to show all hops through an MPLS provider's backbone?",
+      "options": [
+        { "text": "MPLS routers do not decrement TTL by default.", "correct": false },
+        { "text": "P routers may not propagate the IP TTL into the MPLS label header, causing the MPLS hops to be invisible.", "correct": true },
+        { "text": "MPLS blocks ICMP at all P routers.", "correct": false },
+        { "text": "Traceroute does not work with label switching.", "correct": false }
+      ],
+      "explanation": "By default on many platforms, MPLS does **not propagate the IP TTL** into the MPLS header (or vice versa). This means P routers never see the IP TTL expire, so they never send ICMP Time Exceeded replies. The command **mpls ip propagate-ttl** controls this behavior. Providers often disable propagation intentionally to hide their topology."
+    },
+    "scenario_format": {
+      "question": "A Ferguson engineer runs traceroute to a remote branch through the MPLS WAN. The output shows the local CE, then the remote CE — no intermediate hops. Is this expected?",
+      "options": [
+        { "text": "No — there is a routing problem bypassing the provider backbone.", "correct": false },
+        { "text": "Yes — the provider likely disables TTL propagation, hiding MPLS backbone hops from customer traceroutes.", "correct": true },
+        { "text": "No — MPLS should show all label-switched hops.", "correct": false },
+        { "text": "Yes — MPLS replaces IP routing so hops are not visible.", "correct": false }
+      ],
+      "explanation": "Most MPLS providers **disable IP TTL propagation** into the MPLS domain for security (topology hiding). Customer traceroutes only show the CE hops on each end. To troubleshoot within the MPLS cloud, the provider must use **MPLS traceroute (LSP traceroute)** from within their network."
+    },
+    "rule_format": {
+      "statement": "Providers commonly disable **TTL propagation** into MPLS, hiding backbone hops from customer traceroutes. Use **MPLS LSP traceroute** from within the provider network to troubleshoot path issues."
+    }
+  },
+  {
+    "concept_id": "qos_q01",
+    "topic": "QoS",
+    "question_text": "DSCP markings for voice and video",
+    "quiz_format": {
+      "question": "What DSCP value is recommended for voice bearer traffic (RTP) per the RFC 4594 guidelines?",
+      "options": [
+        { "text": "AF41 (DSCP 34).", "correct": false },
+        { "text": "EF (DSCP 46).", "correct": true },
+        { "text": "CS5 (DSCP 40).", "correct": false },
+        { "text": "AF31 (DSCP 26).", "correct": false }
+      ],
+      "explanation": "**EF (Expedited Forwarding, DSCP 46)** is the standard marking for voice bearer (RTP) traffic. It receives **strict priority queuing** (Low Latency Queuing) to ensure minimal delay, jitter, and loss. Voice signaling (SIP/H.323) is typically marked **CS3 (DSCP 24)** and placed in a guaranteed bandwidth queue."
+    },
+    "scenario_format": {
+      "question": "Ferguson deploys VoIP phones at 1,700 branches over WAN circuits. Voice quality is poor during peak hours. Which DSCP marking and queuing treatment should voice RTP traffic receive?",
+      "options": [
+        { "text": "AF41 with weighted fair queuing.", "correct": false },
+        { "text": "EF (DSCP 46) with strict priority queuing (LLQ), allocated no more than 33% of link bandwidth.", "correct": true },
+        { "text": "CS1 with best-effort queuing.", "correct": false },
+        { "text": "DSCP 0 with traffic shaping.", "correct": false }
+      ],
+      "explanation": "Voice RTP must be marked **EF** and placed in a **Low Latency Queue (LLQ)** with strict priority. Best practice limits the LLQ to **33% of link bandwidth** to prevent priority traffic from starving other queues. Voice requires less than **150 ms one-way delay**, **< 30 ms jitter**, and **< 1% packet loss**."
+    },
+    "rule_format": {
+      "statement": "Voice RTP = **EF (DSCP 46)** in a **strict priority (LLQ)** queue, capped at ~33% of link bandwidth. Target: < 150 ms delay, < 30 ms jitter, < 1% loss."
+    }
+  },
+  {
+    "concept_id": "qos_q02",
+    "topic": "QoS",
+    "question_text": "Policing vs shaping behavior",
+    "quiz_format": {
+      "question": "What is the fundamental difference between traffic policing and traffic shaping?",
+      "options": [
+        { "text": "Policing buffers excess traffic; shaping drops it.", "correct": false },
+        { "text": "Policing drops or re-marks excess traffic immediately; shaping buffers it and sends at a metered rate.", "correct": true },
+        { "text": "Policing is applied outbound; shaping is applied inbound.", "correct": false },
+        { "text": "Policing works at Layer 2; shaping works at Layer 3.", "correct": false }
+      ],
+      "explanation": "**Policing** enforces a rate limit by **dropping** or **re-marking** traffic that exceeds the committed rate — it introduces no delay but causes loss. **Shaping** buffers excess traffic in a queue and transmits it at a regulated rate, introducing **delay** instead of drops. Shaping is preferred for WAN interfaces where the provider will police anyway."
+    },
+    "scenario_format": {
+      "question": "Ferguson's branches have 100 Mbps Ethernet handoffs to the ISP, but the contracted CIR is 50 Mbps. Traffic exceeding 50 Mbps is dropped by the ISP's policer, causing random packet loss across all applications. How should Ferguson prevent this?",
+      "options": [
+        { "text": "Apply a policer at 50 Mbps on the branch router.", "correct": false },
+        { "text": "Apply traffic shaping at 50 Mbps on the branch router's egress, so QoS queuing can prioritize traffic within the shaped rate.", "correct": true },
+        { "text": "Request the ISP increase the policer to 100 Mbps.", "correct": false },
+        { "text": "Enable WRED on the branch router.", "correct": false }
+      ],
+      "explanation": "**Shaping** at the branch router throttles all traffic to 50 Mbps, preventing the ISP's tail-drop policer from randomly dropping packets. With shaping, Ferguson's **QoS policy (LLQ, CBWFQ)** can operate within the shaped rate, ensuring voice and critical traffic are prioritized rather than dropped indiscriminately by the ISP."
+    },
+    "rule_format": {
+      "statement": "**Shape** on egress to match the provider's CIR — this enables your **QoS queuing policy** to prioritize traffic within the shaped rate, preventing the provider's policer from randomly dropping packets."
+    }
+  },
+  {
+    "concept_id": "qos_q03",
+    "topic": "QoS",
+    "question_text": "MQC framework components",
+    "quiz_format": {
+      "question": "What are the three components of the Cisco MQC (Modular QoS CLI) framework?",
+      "options": [
+        { "text": "ACL, NAT, and route-map.", "correct": false },
+        { "text": "Class-map (classify), policy-map (action), and service-policy (apply).", "correct": true },
+        { "text": "Queue, scheduler, and dropper.", "correct": false },
+        { "text": "Interface, VLAN, and VRF.", "correct": false }
+      ],
+      "explanation": "The **MQC** framework uses three elements: **class-map** (matches/classifies traffic using ACLs, DSCP, NBAR, etc.), **policy-map** (defines actions: police, shape, queue, mark), and **service-policy** (applies the policy-map to an interface in the input or output direction). This modular design allows complex QoS policies to be built and reused."
+    },
+    "scenario_format": {
+      "question": "Ferguson needs to build a QoS policy that prioritizes voice, guarantees bandwidth for POS transactions, and limits recreational traffic at 1,700 branches. What framework should be used?",
+      "options": [
+        { "text": "Legacy priority queuing with four static queues.", "correct": false },
+        { "text": "MQC: define class-maps for each traffic type, build a policy-map with LLQ/CBWFQ/policing actions, and apply via service-policy.", "correct": true },
+        { "text": "ACL-based rate-limiting on each interface.", "correct": false },
+        { "text": "NBAR standalone without policy-maps.", "correct": false }
+      ],
+      "explanation": "**MQC** provides the flexibility to define multiple **class-maps** (voice, POS, bulk, recreational), assign differentiated treatments in a **policy-map** (LLQ for voice, CBWFQ for POS, policing for recreational), and deploy consistently via **service-policy** across 1,700 branch routers using templates."
+    },
+    "rule_format": {
+      "statement": "**MQC** = **class-map** (classify) + **policy-map** (act) + **service-policy** (apply). It is the standard framework for building scalable, reusable QoS policies on Cisco platforms."
+    }
+  },
+  {
+    "concept_id": "qos_q04",
+    "topic": "QoS",
+    "question_text": "NBAR for application-aware classification",
+    "quiz_format": {
+      "question": "What advantage does NBAR2 provide over DSCP-based classification?",
+      "options": [
+        { "text": "It encrypts traffic based on application type.", "correct": false },
+        { "text": "It performs deep packet inspection to classify applications regardless of their DSCP marking, including encrypted traffic via heuristics.", "correct": true },
+        { "text": "It replaces QoS queuing entirely.", "correct": false },
+        { "text": "It only works at Layer 2.", "correct": false }
+      ],
+      "explanation": "**NBAR2 (Network-Based Application Recognition)** performs **deep packet inspection** and behavioral/heuristic analysis to identify applications. Unlike DSCP, which relies on the sender's marking (easily spoofed), NBAR2 can identify applications by protocol signatures, even classifying some **encrypted traffic** (e.g., identifying WebEx vs YouTube)."
+    },
+    "scenario_format": {
+      "question": "Ferguson branch users are watching streaming video marked DSCP 0, but it's consuming WAN bandwidth and degrading POS performance. How can the branch router identify and limit this traffic?",
+      "options": [
+        { "text": "Block all DSCP 0 traffic.", "correct": false },
+        { "text": "Use NBAR2 to classify streaming video applications in a class-map, then apply policing in a policy-map.", "correct": true },
+        { "text": "Remark all traffic to EF at the branch.", "correct": false },
+        { "text": "Increase the WAN circuit bandwidth.", "correct": false }
+      ],
+      "explanation": "**NBAR2** can identify streaming video (Netflix, YouTube, etc.) by application signature regardless of DSCP marking. A **class-map** using `match protocol` with NBAR classifications, combined with a **policy-map** that polices or deprioritizes that class, protects POS and voice traffic without blocking legitimate business applications."
+    },
+    "rule_format": {
+      "statement": "Use **NBAR2** to classify traffic by application identity (not just DSCP), enabling QoS policies that can identify and deprioritize bandwidth-heavy apps like streaming video regardless of markings."
+    }
+  },
+  {
+    "concept_id": "qos_q05",
+    "topic": "QoS",
+    "question_text": "WRED and congestion avoidance",
+    "quiz_format": {
+      "question": "How does WRED (Weighted Random Early Detection) differ from tail drop?",
+      "options": [
+        { "text": "WRED drops all packets once the queue is full; tail drop drops randomly.", "correct": false },
+        { "text": "WRED proactively drops packets based on DSCP/IP Precedence before the queue fills, while tail drop waits until the queue is full and drops all new arrivals.", "correct": true },
+        { "text": "WRED only works with UDP traffic.", "correct": false },
+        { "text": "WRED is a queuing mechanism; tail drop is a marking mechanism.", "correct": false }
+      ],
+      "explanation": "**WRED** is a congestion **avoidance** mechanism that selectively drops packets based on their DSCP/IP Precedence as the queue fills. Lower-priority traffic is dropped first and more aggressively. This prevents **TCP global synchronization** where tail drop causes all TCP flows to back off simultaneously, leading to throughput oscillation."
+    },
+    "scenario_format": {
+      "question": "Ferguson's WAN links experience periodic throughput drops where all TCP sessions slow down simultaneously, then ramp up together, creating a sawtooth pattern. What QoS mechanism addresses this?",
+      "options": [
+        { "text": "Strict priority queuing for all TCP traffic.", "correct": false },
+        { "text": "WRED on data queues to prevent TCP global synchronization by randomly dropping packets before the queue fills.", "correct": true },
+        { "text": "Traffic shaping at half the line rate.", "correct": false },
+        { "text": "Increasing the interface queue depth.", "correct": false }
+      ],
+      "explanation": "**TCP global synchronization** occurs when tail drop causes all flows to back off and ramp up in lockstep. **WRED** prevents this by randomly dropping packets from different flows at different times, causing independent backoff. WRED should be applied to **data queues** (not the voice LLQ) with thresholds favoring higher-DSCP traffic."
+    },
+    "rule_format": {
+      "statement": "**WRED** prevents **TCP global synchronization** by randomly dropping packets before queue saturation, causing TCP flows to back off independently. Apply it to data queues, never to the voice priority queue."
+    }
+  },
+  {
+    "concept_id": "qos_q06",
+    "topic": "QoS",
+    "question_text": "QoS trust boundaries",
+    "quiz_format": {
+      "question": "What is the purpose of a QoS trust boundary in an enterprise network?",
+      "options": [
+        { "text": "To encrypt traffic at the network perimeter.", "correct": false },
+        { "text": "To define the point at which DSCP/CoS markings from endpoints are accepted or overridden, preventing untrusted devices from gaming QoS policy.", "correct": true },
+        { "text": "To limit the number of VLANs on a switch port.", "correct": false },
+        { "text": "To segment the network into QoS domains.", "correct": false }
+      ],
+      "explanation": "The **trust boundary** is the network point where incoming DSCP/CoS markings are either trusted or re-classified. Typically, the **access layer switch** is the trust boundary — IP phones are trusted (they mark voice EF), but PC traffic behind the phone is re-marked. This prevents users from marking their traffic EF to get priority treatment."
+    },
+    "scenario_format": {
+      "question": "At Ferguson branches, PCs are connected behind Cisco IP phones. A user discovers that marking their PC traffic as EF gives it priority treatment over POS transactions. How should this be prevented?",
+      "options": [
+        { "text": "Block all EF traffic from PCs using an ACL.", "correct": false },
+        { "text": "Set the trust boundary at the access switch: trust DSCP from the phone's voice VLAN but re-mark PC traffic to DSCP 0 on the data VLAN.", "correct": true },
+        { "text": "Disable QoS on the branch router.", "correct": false },
+        { "text": "Use NBAR to detect spoofed DSCP markings.", "correct": false }
+      ],
+      "explanation": "The **trust boundary** should be the access switch port. Cisco switches support **auto-QoS** or manual trust policies that trust DSCP markings from the **voice VLAN** (phone) while re-marking data VLAN traffic to **DSCP 0**. This prevents endpoint DSCP manipulation from bypassing the QoS policy."
+    },
+    "rule_format": {
+      "statement": "Set the **QoS trust boundary** at the access switch — trust markings from **IP phones** on the voice VLAN, re-mark all data VLAN traffic to prevent endpoints from spoofing DSCP values."
+    }
+  },
+  {
+    "concept_id": "qos_q07",
+    "topic": "QoS",
+    "question_text": "LLQ and CBWFQ interaction",
+    "quiz_format": {
+      "question": "In a Cisco QoS policy using both LLQ and CBWFQ, what happens to the strict priority queue during congestion?",
+      "options": [
+        { "text": "LLQ gets unlimited bandwidth and starves all other queues.", "correct": false },
+        { "text": "LLQ traffic is serviced first up to its configured bandwidth limit; excess is policed (dropped) to prevent starvation of CBWFQ classes.", "correct": true },
+        { "text": "LLQ and CBWFQ share bandwidth equally.", "correct": false },
+        { "text": "LLQ is disabled during congestion.", "correct": false }
+      ],
+      "explanation": "**LLQ** provides strict priority scheduling but includes a **built-in policer** at the configured bandwidth. Traffic exceeding the LLQ allocation is **dropped**, protecting CBWFQ classes from starvation. This is why the LLQ bandwidth should be carefully sized — typically **no more than 33%** of the link for all priority classes combined."
+    },
+    "scenario_format": {
+      "question": "Ferguson's branch QoS policy has LLQ for voice at 33% and CBWFQ classes for POS (20%), signaling (5%), and default (remaining). During severe congestion, can voice traffic consume more than 33%?",
+      "options": [
+        { "text": "Yes — LLQ always takes priority regardless of allocation.", "correct": false },
+        { "text": "No — LLQ has a built-in policer that drops voice traffic exceeding 33%, ensuring CBWFQ classes receive their guaranteed bandwidth.", "correct": true },
+        { "text": "Yes — but only if the other queues are empty.", "correct": false },
+        { "text": "No — LLQ is converted to CBWFQ during congestion.", "correct": false }
+      ],
+      "explanation": "The LLQ's **implicit policer** enforces the configured bandwidth cap. Even under congestion, voice traffic exceeding 33% is **dropped**, ensuring POS (20%) and signaling (5%) receive their guaranteed allocations. This is a critical design consideration — undersize the LLQ and voice drops; oversize it and business traffic suffers."
+    },
+    "rule_format": {
+      "statement": "**LLQ** = strict priority + **implicit policer**. It drops excess traffic beyond the allocated bandwidth to protect CBWFQ guarantees — size it carefully to avoid starving either voice or business-critical applications."
+    }
+  },
+  {
+    "concept_id": "qos_q08",
+    "topic": "QoS",
+    "question_text": "QoS pre-classify for tunnel interfaces",
+    "quiz_format": {
+      "question": "Why is 'qos pre-classify' needed on encrypted tunnel interfaces?",
+      "options": [
+        { "text": "It enables hardware-based QoS on the tunnel.", "correct": false },
+        { "text": "After IPSec encryption, the original DSCP markings are hidden inside the encrypted payload; pre-classify preserves the inner header's markings for QoS classification.", "correct": true },
+        { "text": "It disables fragmentation on the tunnel.", "correct": false },
+        { "text": "It applies QoS before the packet enters the routing table.", "correct": false }
+      ],
+      "explanation": "When a packet is **IPSec encrypted**, the original IP header (with its DSCP markings) is encapsulated inside the ESP payload. Without **qos pre-classify**, the QoS policy on the physical interface only sees the outer header (which may have a generic DSCP). Pre-classify allows the policy to match against the **original inner header** before encryption."
+    },
+    "scenario_format": {
+      "question": "Ferguson's DMVPN branches use IPSec tunnel protection. Voice quality is poor despite a QoS policy on the physical WAN interface. Investigation shows all DMVPN traffic is classified as default. What is missing?",
+      "options": [
+        { "text": "DSCP trust on the WAN interface.", "correct": false },
+        { "text": "The 'qos pre-classify' command on the tunnel interface, so the QoS policy can see the original DSCP markings before encryption.", "correct": true },
+        { "text": "A dedicated voice VLAN on the WAN interface.", "correct": false },
+        { "text": "NBAR on the tunnel interface.", "correct": false }
+      ],
+      "explanation": "After **IPSec encryption**, the original DSCP values are hidden inside the ESP payload. The QoS policy on the physical interface sees only the outer GRE/IPSec header. Enabling **qos pre-classify** on the tunnel interface tells IOS to save the original classification for use by the egress QoS policy."
+    },
+    "rule_format": {
+      "statement": "Enable **qos pre-classify** on IPSec/GRE tunnel interfaces — without it, encryption hides the inner DSCP markings and the physical interface's QoS policy classifies all tunnel traffic as default."
+    }
+  },
+  {
+    "concept_id": "nexus_q01",
+    "topic": "Cisco Nexus",
+    "question_text": "vPC technology and dual-homing",
+    "quiz_format": {
+      "question": "What is a Cisco Nexus vPC (Virtual Port Channel)?",
+      "options": [
+        { "text": "A protocol that creates a virtual chassis from two physical switches.", "correct": false },
+        { "text": "A technology that allows a downstream device to form a port channel across two independent Nexus switches, eliminating STP blocked ports.", "correct": true },
+        { "text": "A VPN tunneling protocol for data center interconnect.", "correct": false },
+        { "text": "A virtual routing instance on a single Nexus switch.", "correct": false }
+      ],
+      "explanation": "**vPC** allows two Nexus switches to appear as a single logical port-channel endpoint to downstream devices (servers, switches). This eliminates **STP blocked ports**, doubles available bandwidth, and provides sub-second failover. The two switches synchronize state via a **peer link** and **peer keepalive** channel."
+    },
+    "scenario_format": {
+      "question": "Ferguson's DC has paired Nexus 9000 switches at the aggregation layer. Servers need active-active dual-homing without STP blocking any uplinks. What technology should be deployed?",
+      "options": [
+        { "text": "Spanning-tree with RPVST+ for per-VLAN load balancing.", "correct": false },
+        { "text": "vPC — servers bond NICs into a port channel that spans both Nexus switches, providing active-active forwarding with no STP blocked ports.", "correct": true },
+        { "text": "MLAG using standard IOS commands.", "correct": false },
+        { "text": "FabricPath for Layer 2 multi-pathing.", "correct": false }
+      ],
+      "explanation": "**vPC** enables the server to form a standard LACP port channel with members on two separate Nexus switches. Both links are **active-active** (no STP blocking), and if one switch fails, traffic converges to the surviving switch within **milliseconds** via the vPC peer link."
+    },
+    "rule_format": {
+      "statement": "**vPC** presents two physical Nexus switches as one logical port-channel endpoint — this enables **active-active dual-homing**, eliminates STP blocked ports, and provides sub-second failover."
+    }
+  },
+  {
+    "concept_id": "nexus_q02",
+    "topic": "Cisco Nexus",
+    "question_text": "vPC peer link and keepalive roles",
+    "quiz_format": {
+      "question": "What is the difference between the vPC peer link and the vPC peer keepalive in a Nexus vPC domain?",
+      "options": [
+        { "text": "The peer link carries data traffic; the keepalive carries routing protocol updates.", "correct": false },
+        { "text": "The peer link synchronizes MAC tables, ARP, and carries orphan port traffic; the keepalive is a heartbeat that detects peer failure to prevent split-brain.", "correct": true },
+        { "text": "The peer link is optional; the keepalive is mandatory.", "correct": false },
+        { "text": "They serve the same function and are interchangeable.", "correct": false }
+      ],
+      "explanation": "The **peer link** (typically a 10G+ port channel) synchronizes **MAC/ARP tables** and carries BUM (Broadcast, Unknown unicast, Multicast) traffic plus orphan port traffic. The **peer keepalive** (a lightweight L3 heartbeat, often over the management VRF) detects peer liveness and prevents **dual-active (split-brain)** scenarios."
+    },
+    "scenario_format": {
+      "question": "Ferguson's Nexus vPC pair loses the peer link but the keepalive remains up. What happens to the vPC secondary switch?",
+      "options": [
+        { "text": "It becomes the primary switch.", "correct": false },
+        { "text": "The secondary suspends its vPC member ports to prevent duplicate traffic, since the keepalive confirms the primary is still alive.", "correct": true },
+        { "text": "Both switches continue forwarding normally.", "correct": false },
+        { "text": "All traffic is dropped on both switches.", "correct": false }
+      ],
+      "explanation": "When the **peer link fails** but the **keepalive remains up**, the secondary knows the primary is still alive. To prevent **split-brain** (both switches forwarding independently), the secondary **suspends its vPC member ports**. If the keepalive also failed, the secondary would assume the primary is dead and keep its ports active."
+    },
+    "rule_format": {
+      "statement": "Peer link down + keepalive up = **secondary suspends vPC ports** to prevent split-brain. The keepalive's role is to detect whether the peer is alive when the peer link is lost."
+    }
+  },
+  {
+    "concept_id": "nexus_q03",
+    "topic": "Cisco Nexus",
+    "question_text": "NX-OS feature enablement model",
+    "quiz_format": {
+      "question": "How does the NX-OS feature enablement model differ from traditional IOS?",
+      "options": [
+        { "text": "NX-OS loads all features by default; IOS requires manual enablement.", "correct": false },
+        { "text": "NX-OS requires explicit 'feature <name>' commands to enable protocols (OSPF, BGP, vPC, etc.); IOS includes most features by default.", "correct": true },
+        { "text": "NX-OS uses a license file for each feature; IOS does not.", "correct": false },
+        { "text": "There is no difference; both platforms work identically.", "correct": false }
+      ],
+      "explanation": "NX-OS uses a **modular feature architecture** where protocols are not available until explicitly enabled (e.g., `feature ospf`, `feature bgp`, `feature vpc`). This reduces memory usage and attack surface. In traditional IOS, most protocols are available by default. Forgetting `feature <name>` is a common NX-OS misconfiguration."
+    },
+    "scenario_format": {
+      "question": "A Ferguson engineer configures OSPF on a new Nexus 9000 switch and receives 'Invalid command.' What is the most likely issue?",
+      "options": [
+        { "text": "The OSPF license is not installed.", "correct": false },
+        { "text": "The 'feature ospf' command has not been executed — NX-OS requires explicit feature enablement before protocol commands are available.", "correct": true },
+        { "text": "OSPF is not supported on Nexus 9000.", "correct": false },
+        { "text": "The switch needs a reboot after initial setup.", "correct": false }
+      ],
+      "explanation": "NX-OS requires **feature ospf** before any OSPF configuration commands become available. This is the **modular feature enablement** model unique to NX-OS. Common features that must be enabled include: **ospf, bgp, vpc, hsrp, lacp, interface-vlan, pim**, and **nv overlay** for VXLAN."
+    },
+    "rule_format": {
+      "statement": "NX-OS uses **explicit feature enablement** — run `feature <protocol>` before configuring any protocol. This reduces resource consumption and attack surface but catches engineers used to IOS off guard."
+    }
+  },
+  {
+    "concept_id": "nexus_q04",
+    "topic": "Cisco Nexus",
+    "question_text": "NX-OS VDC and resource isolation",
+    "quiz_format": {
+      "question": "What is a VDC (Virtual Device Context) on a Nexus 7000?",
+      "options": [
+        { "text": "A VPN routing instance similar to a VRF.", "correct": false },
+        { "text": "A logical partition that creates independent virtual switches with separate control planes, configurations, and administrative domains on a single physical chassis.", "correct": true },
+        { "text": "A virtual data center interconnect protocol.", "correct": false },
+        { "text": "A high-availability mechanism for supervisor redundancy.", "correct": false }
+      ],
+      "explanation": "**VDCs** on the Nexus 7000 divide a single physical switch into multiple independent **logical switches**, each with its own configuration, admin accounts, routing processes, and interfaces. This provides **fault isolation** and **administrative separation** without additional hardware. VDCs are not available on Nexus 9000 (which uses VRFs instead)."
+    },
+    "scenario_format": {
+      "question": "Ferguson's DC Nexus 7000 serves both production and lab environments. The team wants configuration changes in the lab environment to have zero risk of impacting production. What NX-OS feature provides this isolation?",
+      "options": [
+        { "text": "VRF — separate routing tables.", "correct": false },
+        { "text": "VDC — separate virtual switches with independent control planes, configurations, and admin access.", "correct": true },
+        { "text": "RBAC — role-based access control.", "correct": false },
+        { "text": "vPC domains — one for prod, one for lab.", "correct": false }
+      ],
+      "explanation": "**VDCs** provide complete isolation — a misconfigured routing protocol or interface in the lab VDC cannot affect the production VDC. Each VDC has its own **CLI, running config, routing processes, and dedicated interfaces**. This is stronger isolation than VRFs, which share the same control plane."
+    },
+    "rule_format": {
+      "statement": "**VDCs** (Nexus 7000) create fully independent virtual switches on one chassis — separate control planes, configs, and admin domains provide stronger isolation than VRFs for multi-tenant or prod/lab separation."
+    }
+  },
+  {
+    "concept_id": "nexus_q05",
+    "topic": "Cisco Nexus",
+    "question_text": "Nexus FEX (Fabric Extender) architecture",
+    "quiz_format": {
+      "question": "What is the role of a Cisco Nexus 2000 FEX (Fabric Extender)?",
+      "options": [
+        { "text": "It is a standalone top-of-rack switch with its own control plane.", "correct": false },
+        { "text": "It extends the parent Nexus switch's ports to the rack level — all control-plane functions reside on the parent switch, and the FEX acts as a remote line card.", "correct": true },
+        { "text": "It provides WAN connectivity for the data center.", "correct": false },
+        { "text": "It replaces the need for vPC by providing active-active uplinks natively.", "correct": false }
+      ],
+      "explanation": "A **FEX** is a purpose-built device that acts as a **remote line card** of the parent Nexus 5000/7000/9000. It has no local control plane — all switching, ACL, QoS, and management is handled by the parent. This simplifies management (single point of configuration) and reduces cost for high port-density deployments."
+    },
+    "scenario_format": {
+      "question": "Ferguson is expanding its DC with 200 new server connections. The team wants to minimize the number of switches to manage. What Nexus architecture supports this?",
+      "options": [
+        { "text": "Deploy 10 independent top-of-rack switches.", "correct": false },
+        { "text": "Deploy Nexus 2000 FEXes connected to the existing Nexus parent switches — all 200 ports are managed as part of the parent switch.", "correct": true },
+        { "text": "Stack multiple Nexus 3000 switches.", "correct": false },
+        { "text": "Use a Nexus 7000 with 200 ports in a single line card.", "correct": false }
+      ],
+      "explanation": "**FEXes** extend the parent switch's port capacity to the rack level without adding management overhead. All 200 ports appear as interfaces on the parent Nexus and are configured, monitored, and troubleshot from a **single management point**. This is operationally simpler than managing 10 independent switches."
+    },
+    "rule_format": {
+      "statement": "A **FEX (Nexus 2000)** is a remote line card — no local control plane. It extends the parent Nexus switch's ports to the rack, providing **simplified single-point management** for high port-density deployments."
+    }
+  },
+  {
+    "concept_id": "nexus_q06",
+    "topic": "Cisco Nexus",
+    "question_text": "NX-OS rollback and checkpoint",
+    "quiz_format": {
+      "question": "What does the NX-OS 'checkpoint' feature provide?",
+      "options": [
+        { "text": "It saves a copy of the startup-config only.", "correct": false },
+        { "text": "It creates a named snapshot of the running configuration that can be rolled back to in case of misconfiguration.", "correct": true },
+        { "text": "It enables ISSU on the switch.", "correct": false },
+        { "text": "It backs up the boot image.", "correct": false }
+      ],
+      "explanation": "NX-OS **checkpoint** creates a snapshot of the running configuration. If a change causes problems, you can execute **rollback running-config checkpoint <name>** to revert to the saved state. This generates a set of **delete/add** commands to undo the changes, providing a safer change management process than manually reverting."
+    },
+    "scenario_format": {
+      "question": "Before making a complex QoS change on Ferguson's Nexus 9000 during a maintenance window, the engineer wants a safety net to revert quickly if issues arise. What NX-OS feature should be used?",
+      "options": [
+        { "text": "Copy running-config to a TFTP server.", "correct": false },
+        { "text": "Create a checkpoint before the change, then rollback if needed — NX-OS generates the exact commands to revert.", "correct": true },
+        { "text": "Use 'reload in 10' to auto-reboot if the change fails.", "correct": false },
+        { "text": "Enable configuration archive on a syslog server.", "correct": false }
+      ],
+      "explanation": "NX-OS **checkpoint/rollback** is superior to manual backup/restore because it generates a **diff-based rollback** — only the changed commands are reverted, not the entire config. This is faster and less disruptive, and it supports **SOX change management** requirements with named checkpoints and timestamps."
+    },
+    "rule_format": {
+      "statement": "Use NX-OS **checkpoint** before changes and **rollback** to revert — it generates a diff-based undo, which is faster and safer than reloading a full config backup."
+    }
+  },
+  {
+    "concept_id": "nexus_q07",
+    "topic": "Cisco Nexus",
+    "question_text": "Nexus 9000 in ACI vs standalone NX-OS mode",
+    "quiz_format": {
+      "question": "What are the two operating modes of a Cisco Nexus 9000 switch?",
+      "options": [
+        { "text": "Layer 2 mode and Layer 3 mode.", "correct": false },
+        { "text": "ACI mode (managed by APIC controller) and standalone NX-OS mode (traditional CLI management).", "correct": true },
+        { "text": "VDC mode and non-VDC mode.", "correct": false },
+        { "text": "Fabric mode and access mode.", "correct": false }
+      ],
+      "explanation": "Nexus 9000 can run in **ACI mode**, where it is part of a Cisco ACI fabric managed by an **APIC controller** using a policy-based model, or in **standalone NX-OS mode**, where it operates as a traditional switch with CLI/NXAPI management. The choice depends on whether the organization adopts SDN (ACI) or traditional networking."
+    },
+    "scenario_format": {
+      "question": "Ferguson is evaluating Nexus 9000 switches for a DC refresh. The team has strong CLI expertise but no SDN experience. Which operating mode is appropriate for the initial deployment?",
+      "options": [
+        { "text": "ACI mode with APIC — it's always the better choice.", "correct": false },
+        { "text": "Standalone NX-OS mode — it leverages the team's CLI expertise and doesn't require APIC infrastructure or SDN retraining.", "correct": true },
+        { "text": "Hybrid mode — run ACI and NX-OS simultaneously.", "correct": false },
+        { "text": "OpenFlow mode with a third-party controller.", "correct": false }
+      ],
+      "explanation": "**Standalone NX-OS mode** is operationally familiar to teams with Cisco CLI experience. ACI mode requires an **APIC controller cluster** (additional infrastructure), a fundamentally different policy-based operational model, and staff retraining. Ferguson can migrate to ACI later if SDN benefits justify the investment."
+    },
+    "rule_format": {
+      "statement": "Nexus 9000 runs in **ACI mode** (APIC-managed SDN) or **standalone NX-OS** (traditional CLI). Choose based on team expertise and SDN readiness — ACI requires APIC infrastructure and a policy-based operational shift."
+    }
+  },
+  {
+    "concept_id": "nexus_q08",
+    "topic": "Cisco Nexus",
+    "question_text": "NX-OS ISSU and non-disruptive upgrades",
+    "quiz_format": {
+      "question": "What does ISSU (In-Service Software Upgrade) provide on a Nexus switch?",
+      "options": [
+        { "text": "It upgrades the switch firmware without any preparation.", "correct": false },
+        { "text": "It allows the NX-OS software to be upgraded without disrupting data-plane traffic, using dual-supervisor or hitless mechanisms.", "correct": true },
+        { "text": "It automatically downloads the latest NX-OS from Cisco.", "correct": false },
+        { "text": "It creates a rollback checkpoint before the upgrade.", "correct": false }
+      ],
+      "explanation": "**ISSU** enables NX-OS upgrades without traffic disruption on platforms with **dual supervisors** or specific hardware support. The standby supervisor loads the new image, takes over as active (SSO), and the data plane continues forwarding via **NSF**. On single-supervisor platforms, a **non-disruptive** upgrade may still be possible depending on the version."
+    },
+    "scenario_format": {
+      "question": "Ferguson's DC core Nexus 7000s need a critical NX-OS security patch. The network cannot tolerate downtime during business hours. What upgrade approach minimizes disruption?",
+      "options": [
+        { "text": "Schedule a late-night maintenance window for a cold reload.", "correct": false },
+        { "text": "Perform an ISSU — the standby supervisor loads the new image and becomes active while the data plane continues forwarding via NSF.", "correct": true },
+        { "text": "Upgrade one switch at a time with vPC keeping traffic flowing.", "correct": false },
+        { "text": "Deploy the patch on a FEX first to test.", "correct": false }
+      ],
+      "explanation": "**ISSU** on dual-supervisor Nexus 7000s allows the upgrade to occur while traffic continues flowing. The standby loads the new image, SSO switches active roles, and **NSF** maintains forwarding during the switchover. Always verify ISSU compatibility between the source and target NX-OS versions before attempting."
+    },
+    "rule_format": {
+      "statement": "**ISSU** on dual-supervisor Nexus platforms upgrades NX-OS without data-plane disruption via **SSO + NSF**. Always verify source/target version ISSU compatibility in the release notes first."
+    }
+  },
+  {
+    "concept_id": "sdwan_q01",
+    "topic": "Versa SD-WAN",
+    "question_text": "Versa SD-WAN architecture components",
+    "quiz_format": {
+      "question": "What are the primary management components in a Versa SD-WAN deployment?",
+      "options": [
+        { "text": "Controller, Forwarder, and Gateway.", "correct": false },
+        { "text": "Versa Director (orchestration/management) and Versa Analytics (telemetry/reporting).", "correct": true },
+        { "text": "vManage and vSmart.", "correct": false },
+        { "text": "SD-WAN Hub and SD-WAN Spoke.", "correct": false }
+      ],
+      "explanation": "Versa's architecture uses **Versa Director** for centralized orchestration, policy management, and device provisioning, and **Versa Analytics** for real-time and historical telemetry, reporting, and troubleshooting. The **FlexVNF** appliance (CPE) runs at each site and enforces policies locally. This is distinct from Cisco's vManage/vSmart/vBond architecture."
+    },
+    "scenario_format": {
+      "question": "Ferguson is evaluating Versa SD-WAN in a POC. The team needs centralized policy management and visibility into WAN performance across pilot branches. Which Versa components must be deployed first?",
+      "options": [
+        { "text": "Only FlexVNF appliances at each branch.", "correct": false },
+        { "text": "Versa Director for centralized management and policy, plus Versa Analytics for performance visibility.", "correct": true },
+        { "text": "A pair of Versa firewalls at the DC.", "correct": false },
+        { "text": "Versa cloud gateway only.", "correct": false }
+      ],
+      "explanation": "The **Versa Director** is the central orchestration platform — it pushes templates, policies, and configurations to CPE devices. **Versa Analytics** provides the WAN performance dashboards, SLA monitoring, and reporting needed to validate the POC. Both are prerequisites before deploying **FlexVNF** appliances at pilot branches."
+    },
+    "rule_format": {
+      "statement": "Versa SD-WAN = **Director** (orchestration/policy) + **Analytics** (telemetry/reporting) + **FlexVNF** (CPE). Deploy Director and Analytics first, then provision branch CPEs."
+    }
+  },
+  {
+    "concept_id": "sdwan_q02",
+    "topic": "Versa SD-WAN",
+    "question_text": "Zero Touch Provisioning in SD-WAN",
+    "quiz_format": {
+      "question": "How does Zero Touch Provisioning (ZTP) work in a Versa SD-WAN deployment?",
+      "options": [
+        { "text": "A technician manually configures each CPE on-site.", "correct": false },
+        { "text": "The CPE boots, contacts a staging server or Director via a bootstrap configuration, authenticates, and pulls its full configuration automatically.", "correct": true },
+        { "text": "The CPE receives its configuration via SNMP from a management station.", "correct": false },
+        { "text": "ZTP only works with cloud-hosted Versa Director instances.", "correct": false }
+      ],
+      "explanation": "**ZTP** allows a factory-default CPE to be shipped to a branch where an unskilled technician simply connects power and WAN. The device uses a **bootstrap process** (DHCP options or USB-based staging) to contact the Versa Director, authenticates via certificates, and downloads its complete configuration and policies. This dramatically reduces deployment time at scale."
+    },
+    "scenario_format": {
+      "question": "Ferguson needs to deploy SD-WAN CPEs to 50 pilot branches without sending network engineers to each site. How does Versa's ZTP help?",
+      "options": [
+        { "text": "Engineers must pre-stage each device in the DC before shipping.", "correct": false },
+        { "text": "CPEs are shipped directly to branches; on power-up they auto-connect to Versa Director via ZTP, authenticate, and download their configuration — no on-site engineer needed.", "correct": true },
+        { "text": "ZTP requires a console connection at each site.", "correct": false },
+        { "text": "ZTP only provisions basic connectivity; the full config must be pushed manually.", "correct": false }
+      ],
+      "explanation": "**ZTP** enables Ferguson to ship CPEs directly to branches. Store personnel plug in power and Ethernet — the device auto-provisions via the **Versa Director**. For 1,700 branches, this eliminates thousands of truck rolls. The POC with 50 sites validates ZTP reliability before full-scale rollout."
+    },
+    "rule_format": {
+      "statement": "**ZTP** enables ship-to-site deployment — CPEs auto-provision from the **Versa Director** on first boot, eliminating per-site engineer visits. Validate ZTP reliability in the POC before scaling to 1,700 branches."
+    }
+  },
+  {
+    "concept_id": "sdwan_q03",
+    "topic": "Versa SD-WAN",
+    "question_text": "SD-WAN overlay vs underlay network concepts",
+    "quiz_format": {
+      "question": "In SD-WAN terminology, what is the difference between overlay and underlay?",
+      "options": [
+        { "text": "Overlay is the physical WAN circuit; underlay is the logical tunnel.", "correct": false },
+        { "text": "Underlay is the physical transport (MPLS, broadband, LTE); overlay is the encrypted tunnel mesh built on top of the underlay for application traffic.", "correct": true },
+        { "text": "Overlay is for voice; underlay is for data.", "correct": false },
+        { "text": "They are the same thing in SD-WAN.", "correct": false }
+      ],
+      "explanation": "The **underlay** consists of the physical WAN transports — MPLS circuits, broadband internet, LTE — provided by ISPs. The **overlay** is the logical, encrypted tunnel network built on top of these transports by the SD-WAN fabric. SD-WAN abstracts the underlay, allowing **application-aware traffic steering** across multiple transports transparently."
+    },
+    "scenario_format": {
+      "question": "Ferguson's pilot branches have both MPLS and broadband internet circuits. The Versa SD-WAN POC needs to utilize both circuits for traffic. How does SD-WAN achieve this?",
+      "options": [
+        { "text": "By replacing MPLS with broadband at all sites.", "correct": false },
+        { "text": "By building encrypted overlay tunnels across both underlay transports (MPLS and broadband), enabling application-aware traffic steering across both simultaneously.", "correct": true },
+        { "text": "By load-balancing at the ISP level using BGP.", "correct": false },
+        { "text": "By routing voice over MPLS and data over broadband using static routes.", "correct": false }
+      ],
+      "explanation": "SD-WAN creates **overlay tunnels** over each **underlay transport**. Policies then steer applications — e.g., voice over MPLS overlay (lower jitter), web traffic over broadband overlay (more bandwidth). Both circuits are actively utilized, and if one fails, traffic automatically shifts to the surviving overlay."
+    },
+    "rule_format": {
+      "statement": "**Underlay** = physical transports (MPLS, broadband, LTE). **Overlay** = encrypted tunnel mesh on top. SD-WAN's value is **application-aware steering** across multiple underlays, utilizing all circuits simultaneously."
+    }
+  },
+  {
+    "concept_id": "sdwan_q04",
+    "topic": "Versa SD-WAN",
+    "question_text": "SD-WAN application-aware traffic steering",
+    "quiz_format": {
+      "question": "How does SD-WAN application-aware routing differ from traditional ECMP or policy-based routing?",
+      "options": [
+        { "text": "It uses BGP communities to steer traffic.", "correct": false },
+        { "text": "It continuously monitors SLA metrics (latency, jitter, loss) per tunnel and dynamically steers applications to the best-performing path in real-time.", "correct": true },
+        { "text": "It only works with a single WAN circuit.", "correct": false },
+        { "text": "It requires manual path selection for each application.", "correct": false }
+      ],
+      "explanation": "SD-WAN **application-aware routing** uses continuous **SLA probing** (measuring latency, jitter, and packet loss per overlay tunnel) combined with per-application SLA thresholds. When a tunnel's performance degrades below the application's SLA requirement, traffic is **automatically moved** to a tunnel that meets the SLA — no manual intervention required."
+    },
+    "scenario_format": {
+      "question": "During Ferguson's Versa POC, a broadband circuit at a pilot branch experiences intermittent packet loss. Voice calls degrade. How should SD-WAN handle this?",
+      "options": [
+        { "text": "Alert the NOC to manually reroute voice traffic.", "correct": false },
+        { "text": "Automatically detect the SLA degradation on the broadband overlay and steer voice traffic to the MPLS overlay, which still meets the voice SLA.", "correct": true },
+        { "text": "Drop the voice call and wait for the circuit to recover.", "correct": false },
+        { "text": "Apply QoS marking on the broadband circuit.", "correct": false }
+      ],
+      "explanation": "**Application-aware steering** continuously measures each tunnel's SLA. When the broadband tunnel's **packet loss** exceeds the voice SLA threshold (e.g., 1%), the SD-WAN controller automatically redirects voice traffic to the **MPLS tunnel** — often within seconds, fast enough to prevent noticeable call degradation."
+    },
+    "rule_format": {
+      "statement": "SD-WAN **application-aware routing** continuously probes tunnel SLA (latency, jitter, loss) and **automatically steers** traffic to the best-performing path when thresholds are violated — no manual intervention needed."
+    }
+  },
+  {
+    "concept_id": "sdwan_q05",
+    "topic": "Versa SD-WAN",
+    "question_text": "SD-WAN security integration (SASE/SSE)",
+    "quiz_format": {
+      "question": "What security functions can Versa's SD-WAN FlexVNF integrate directly at the branch CPE?",
+      "options": [
+        { "text": "Only basic ACLs.", "correct": false },
+        { "text": "Next-generation firewall, IPS, URL filtering, and secure web gateway functions — consolidating networking and security on a single platform.", "correct": true },
+        { "text": "Only IPSec encryption of the overlay.", "correct": false },
+        { "text": "Physical security camera integration.", "correct": false }
+      ],
+      "explanation": "Versa's **FlexVNF** is a multi-function platform that combines SD-WAN routing, **NGFW**, **IPS/IDS**, **URL/content filtering**, **anti-malware**, and **secure web gateway** on a single CPE. This **SASE (Secure Access Service Edge)** approach eliminates the need for separate firewall appliances at each branch, reducing cost and complexity."
+    },
+    "scenario_format": {
+      "question": "Ferguson's pilot branches currently have separate routers, firewalls, and web filters. The Versa POC aims to consolidate these functions. What does the FlexVNF platform offer?",
+      "options": [
+        { "text": "Only routing — security must remain on separate appliances.", "correct": false },
+        { "text": "Integrated SD-WAN + NGFW + IPS + URL filtering on a single CPE, eliminating separate firewall and web filter appliances at each branch.", "correct": true },
+        { "text": "Cloud-only security with no on-premises capabilities.", "correct": false },
+        { "text": "Basic packet filtering only.", "correct": false }
+      ],
+      "explanation": "Versa's **FlexVNF** provides a **converged networking and security platform**. For Ferguson with 1,700 branches, consolidating router + firewall + web filter into one appliance could significantly reduce hardware costs, management complexity, and operational overhead. The POC should validate that Versa's security features meet Ferguson's compliance requirements."
+    },
+    "rule_format": {
+      "statement": "Versa **FlexVNF** consolidates SD-WAN, NGFW, IPS, and web filtering on a single CPE — evaluate whether this **SASE consolidation** meets Ferguson's security and compliance requirements during the POC."
+    }
+  },
+  {
+    "concept_id": "sdwan_q06",
+    "topic": "Versa SD-WAN",
+    "question_text": "SD-WAN migration strategy from MPLS",
+    "quiz_format": {
+      "question": "What is the recommended approach for migrating from MPLS to SD-WAN at a large enterprise?",
+      "options": [
+        { "text": "Rip-and-replace all MPLS circuits on day one.", "correct": false },
+        { "text": "A phased approach: deploy SD-WAN alongside existing MPLS (hybrid WAN), validate with a POC, then gradually reduce MPLS dependency based on results.", "correct": true },
+        { "text": "Deploy SD-WAN only at the DC and keep MPLS at branches.", "correct": false },
+        { "text": "Replace MPLS with direct internet access at all sites immediately.", "correct": false }
+      ],
+      "explanation": "A **phased hybrid WAN** approach reduces risk. The SD-WAN overlay is built across both MPLS and broadband; MPLS serves as a reliable underlay while broadband provides additional bandwidth. As confidence grows, MPLS can be downgraded or eliminated at sites where broadband proves sufficient. This avoids a risky cutover."
+    },
+    "scenario_format": {
+      "question": "Ferguson currently has MPLS at all 1,700 branches. The Versa SD-WAN POC covers 50 sites. What should the migration strategy look like?",
+      "options": [
+        { "text": "Deploy Versa to all 1,700 sites and cancel MPLS contracts immediately.", "correct": false },
+        { "text": "Run Versa SD-WAN in parallel with MPLS at pilot sites (hybrid WAN), validate performance and reliability, then expand regionally while maintaining MPLS as a fallback.", "correct": true },
+        { "text": "Replace MPLS with LTE at all branches.", "correct": false },
+        { "text": "Deploy SD-WAN at the DC only and leave branch WAN unchanged.", "correct": false }
+      ],
+      "explanation": "The **hybrid WAN POC** lets Ferguson validate SD-WAN over real branch traffic while keeping MPLS as a safety net. Metrics from Versa Analytics (latency, jitter, availability) build the business case for each region. MPLS can be **right-sized** (reduced bandwidth) or eliminated at branches where broadband-only SD-WAN meets SLA requirements."
+    },
+    "rule_format": {
+      "statement": "Migrate to SD-WAN with a **hybrid WAN strategy** — run SD-WAN alongside MPLS, validate in a POC, then reduce MPLS based on data. Never rip-and-replace 1,700 sites without proven results."
+    }
+  },
+  {
+    "concept_id": "sdwan_q07",
+    "topic": "Versa SD-WAN",
+    "question_text": "SD-WAN centralized policy vs distributed enforcement",
+    "quiz_format": {
+      "question": "In Versa SD-WAN, where are policies defined and where are they enforced?",
+      "options": [
+        { "text": "Policies are defined and enforced on each CPE independently.", "correct": false },
+        { "text": "Policies are defined centrally on the Versa Director and enforced locally on each FlexVNF CPE.", "correct": true },
+        { "text": "Policies are enforced only in the cloud.", "correct": false },
+        { "text": "Policies are defined on the Analytics platform and pushed to the Director.", "correct": false }
+      ],
+      "explanation": "Versa uses a **centralized policy model** — the **Director** defines templates, traffic policies, security rules, and SLA thresholds. These are pushed to each **FlexVNF CPE**, which enforces them locally in the data plane. This ensures **consistency** across all sites while allowing **distributed forwarding** decisions based on local tunnel conditions."
+    },
+    "scenario_format": {
+      "question": "Ferguson wants to ensure that every branch enforces the same QoS policy, security rules, and application steering behavior. With 1,700 branches, per-site configuration is not feasible. How does Versa address this?",
+      "options": [
+        { "text": "Generate individual configs for each branch using scripts.", "correct": false },
+        { "text": "Define policies centrally on the Versa Director using templates, then push them to all FlexVNF CPEs — each CPE enforces locally with consistent behavior.", "correct": true },
+        { "text": "Let each branch engineer configure policies locally.", "correct": false },
+        { "text": "Use SNMP to push configurations.", "correct": false }
+      ],
+      "explanation": "**Centralized policy with distributed enforcement** is SD-WAN's operational advantage. The Director's **template system** allows Ferguson to define a policy once and apply it to all branches (or groups of branches). Local CPEs make real-time forwarding decisions based on the centrally defined policy and locally observed SLA metrics."
+    },
+    "rule_format": {
+      "statement": "**Versa Director** defines policies centrally via templates; **FlexVNF CPEs** enforce locally. This provides consistency at scale while enabling real-time, distributed forwarding decisions."
+    }
+  },
+  {
+    "concept_id": "sdwan_q08",
+    "topic": "Versa SD-WAN",
+    "question_text": "SD-WAN POC success criteria and validation",
+    "quiz_format": {
+      "question": "What are the key metrics to validate during an SD-WAN proof-of-concept?",
+      "options": [
+        { "text": "Only cost savings compared to MPLS.", "correct": false },
+        { "text": "Application performance SLAs (latency, jitter, loss), failover time between circuits, ZTP reliability, security policy enforcement, and management platform usability.", "correct": true },
+        { "text": "Only the number of sites deployed per week.", "correct": false },
+        { "text": "Only encryption throughput of the CPE.", "correct": false }
+      ],
+      "explanation": "A comprehensive POC validates **application SLAs** (voice, POS, ERP latency/jitter/loss), **failover behavior** (circuit failure recovery time), **ZTP success rate**, **security policy enforcement** (NGFW, URL filtering), and **operational workflows** (Director usability, Analytics visibility). Cost savings are calculated from these results, not tested independently."
+    },
+    "scenario_format": {
+      "question": "Ferguson's Versa SD-WAN POC is running at 50 branches. What criteria should determine if the POC is successful enough to expand?",
+      "options": [
+        { "text": "Whether the Versa Director interface looks modern.", "correct": false },
+        { "text": "Whether voice quality meets SLA over broadband, failover between circuits is sub-second, ZTP works reliably, and POS/ERP transactions perform within acceptable latency thresholds.", "correct": true },
+        { "text": "Whether MPLS can be eliminated at all 50 sites.", "correct": false },
+        { "text": "Whether Versa supports IPv6.", "correct": false }
+      ],
+      "explanation": "POC success criteria should be **measurable and aligned with business requirements**: voice MOS scores greater than or equal to 4.0, POS transaction latency < 200 ms, circuit failover < 5 seconds, ZTP success rate > 95%, and security policies enforced consistently. **Versa Analytics** provides the data to validate these metrics across the 50 pilot branches."
+    },
+    "rule_format": {
+      "statement": "SD-WAN POC success = measurable validation of **application SLAs, failover speed, ZTP reliability, and security enforcement**. Use **Versa Analytics** data to build the business case for expansion beyond the pilot."
+    }
+  },
+  {
+    "concept_id": "sox_q01",
+    "topic": "SOX ITGC",
+    "question_text": "SOX ITGC change management controls",
+    "quiz_format": {
+      "question": "What is the purpose of IT General Controls (ITGCs) related to change management under SOX?",
+      "options": [
+        { "text": "To accelerate deployments by reducing approval steps.", "correct": false },
+        { "text": "To ensure that changes to IT systems supporting financial reporting are authorized, tested, and documented to prevent unauthorized modifications.", "correct": true },
+        { "text": "To manage physical inventory changes at warehouses.", "correct": false },
+        { "text": "To track employee headcount changes.", "correct": false }
+      ],
+      "explanation": "SOX **ITGCs for change management** require that changes to systems affecting financial reporting are **authorized** (approved by appropriate personnel), **tested** (validated before production), and **documented** (audit trail maintained). This prevents unauthorized changes that could compromise the **integrity of financial data** flowing through IT systems."
+    },
+    "scenario_format": {
+      "question": "A Ferguson network engineer needs to modify a firewall rule on the DC firewall that protects the ERP system. Under SOX ITGC requirements, what process must be followed?",
+      "options": [
+        { "text": "Make the change during off-hours and document it afterward.", "correct": false },
+        { "text": "Submit a change request with business justification, obtain management approval, test in a non-production environment, implement during an approved window, and document the change with before/after evidence.", "correct": true },
+        { "text": "Have the engineer's manager make the change instead.", "correct": false },
+        { "text": "File a ticket after the change is implemented.", "correct": false }
+      ],
+      "explanation": "SOX requires a **formal change management process**: request, approval, testing, scheduled implementation, documentation. For network devices protecting financial systems (like the ERP firewall), this ensures **auditability** and prevents unauthorized modifications. The **before/after configuration** must be preserved as audit evidence."
+    },
+    "rule_format": {
+      "statement": "SOX change management: every change to systems supporting financial reporting must be **authorized, tested, scheduled, and documented** with audit evidence — no ad-hoc changes to production."
+    }
+  },
+  {
+    "concept_id": "sox_q02",
+    "topic": "SOX ITGC",
+    "question_text": "SOX access control and least privilege",
+    "quiz_format": {
+      "question": "What does the principle of least privilege require in a SOX ITGC context?",
+      "options": [
+        { "text": "All users share a single admin account for accountability.", "correct": false },
+        { "text": "Users are granted only the minimum access necessary to perform their job functions, with access reviewed periodically.", "correct": true },
+        { "text": "Privileged access is only restricted during audits.", "correct": false },
+        { "text": "All access is granted through self-service portals without approval.", "correct": false }
+      ],
+      "explanation": "**Least privilege** under SOX ITGCs means each user receives only the access needed for their role — no more. **Periodic access reviews** (typically quarterly) verify that access remains appropriate, especially for systems supporting financial reporting. Terminated employees must have access removed promptly, and **shared/generic accounts** should be eliminated."
+    },
+    "scenario_format": {
+      "question": "Ferguson's SOX auditor asks for evidence of access control on network devices that support financial systems. What should the network team provide?",
+      "options": [
+        { "text": "A list of all IP addresses on the network.", "correct": false },
+        { "text": "Documentation showing individual named accounts with role-based access (TACACS+/RADIUS), quarterly access reviews, and procedures for revoking access upon termination.", "correct": true },
+        { "text": "Proof that the firewall is turned on.", "correct": false },
+        { "text": "A signed statement that access is controlled.", "correct": false }
+      ],
+      "explanation": "SOX auditors require **evidence of controls**, not just policies. This includes: **named accounts** (no shared admin), **RBAC** via TACACS+/RADIUS, **quarterly access reviews** with sign-off, and **timely deprovisioning** procedures for terminated employees. The network team should demonstrate these controls for all devices in the financial reporting path."
+    },
+    "rule_format": {
+      "statement": "SOX access controls require **named individual accounts**, **RBAC** (TACACS+/RADIUS), **quarterly access reviews**, and **timely deprovisioning** — shared/generic accounts are a finding."
+    }
+  },
+  {
+    "concept_id": "sox_q03",
+    "topic": "SOX ITGC",
+    "question_text": "SOX audit trails and logging requirements",
+    "quiz_format": {
+      "question": "Why are audit trails critical for SOX ITGC compliance on network devices?",
+      "options": [
+        { "text": "They help troubleshoot network performance.", "correct": false },
+        { "text": "They provide evidence of who made what changes and when, enabling detection of unauthorized modifications to systems supporting financial reporting.", "correct": true },
+        { "text": "They are only needed for firewall devices.", "correct": false },
+        { "text": "They replace the need for change management processes.", "correct": false }
+      ],
+      "explanation": "**Audit trails** (syslog, TACACS+ accounting, configuration archives) provide the **who, what, when** record required by SOX. Auditors verify that changes to in-scope systems are traceable to authorized individuals and approved change requests. Without audit trails, there is no way to prove controls are operating effectively."
+    },
+    "scenario_format": {
+      "question": "Ferguson's SOX auditor finds that network device changes cannot be traced to specific individuals. What improvements must the network team implement?",
+      "options": [
+        { "text": "Enable SNMP traps for all devices.", "correct": false },
+        { "text": "Implement TACACS+ accounting for command logging, centralized syslog with timestamps, and configuration archive with change attribution to named users.", "correct": true },
+        { "text": "Add more network monitoring dashboards.", "correct": false },
+        { "text": "Require engineers to email their changes to a distribution list.", "correct": false }
+      ],
+      "explanation": "**TACACS+ command accounting** logs every command executed by each user. **Centralized syslog** with NTP-synchronized timestamps provides a tamper-resistant audit trail. **Configuration archives** (e.g., RANCID, Oxidized, or NX-OS checkpoint) capture before/after configs. Together, these satisfy the SOX requirement for **attributable, timestamped change records**."
+    },
+    "rule_format": {
+      "statement": "SOX audit trails = **TACACS+ command accounting** + **centralized syslog with NTP sync** + **configuration archiving** — every change must be traceable to a named user with a timestamp."
+    }
+  },
+  {
+    "concept_id": "sox_q04",
+    "topic": "SOX ITGC",
+    "question_text": "Segregation of duties in network operations",
+    "quiz_format": {
+      "question": "What does segregation of duties (SoD) mean in a SOX ITGC context for network operations?",
+      "options": [
+        { "text": "Network engineers should not work on weekends.", "correct": false },
+        { "text": "The person who requests or develops a change should not be the same person who approves and deploys it to production.", "correct": true },
+        { "text": "Network and security teams must use different buildings.", "correct": false },
+        { "text": "Engineers should only work on one technology area.", "correct": false }
+      ],
+      "explanation": "**Segregation of duties** prevents a single individual from controlling all aspects of a critical process. In network operations, this means the person who **develops** a change request should not be the same person who **approves** it. The person who **deploys** should not be the same person who **reviews** the deployment. This prevents both fraud and errors."
+    },
+    "scenario_format": {
+      "question": "At Ferguson, a senior network engineer writes a firewall change, approves it himself, and implements it during a maintenance window. What SOX control is violated?",
+      "options": [
+        { "text": "Least privilege — the engineer has too much access.", "correct": false },
+        { "text": "Segregation of duties — the same person should not author, approve, and implement a change.", "correct": true },
+        { "text": "Change management — the change was not tested.", "correct": false },
+        { "text": "Audit trail — the change was not logged.", "correct": false }
+      ],
+      "explanation": "**SoD** requires that at minimum, the **approval** of a change be performed by someone other than the **author**. Ideally, three roles are separated: **requester/developer**, **approver**, and **implementer**. For small teams, a compensating control (e.g., post-implementation review by a peer or manager) may be acceptable if full SoD is impractical."
+    },
+    "rule_format": {
+      "statement": "**Segregation of duties**: the change **author**, **approver**, and **implementer** should be different people. For small teams, a **post-implementation peer review** can serve as a compensating control."
+    }
+  },
+  {
+    "concept_id": "sox_q05",
+    "topic": "SOX ITGC",
+    "question_text": "SOX scoping — which network systems are in scope",
+    "quiz_format": {
+      "question": "How is the scope of SOX ITGC determined for network infrastructure?",
+      "options": [
+        { "text": "All network devices are automatically in scope.", "correct": false },
+        { "text": "Network devices are in scope if they support, process, or protect systems and data involved in financial reporting.", "correct": true },
+        { "text": "Only devices purchased with capital budget are in scope.", "correct": false },
+        { "text": "Scope is determined by the network team independently.", "correct": false }
+      ],
+      "explanation": "SOX scope is determined by the **financial reporting risk assessment**. Network devices are in scope if they **support** (carry traffic for), **process** (route/switch), or **protect** (firewall/ACL) systems involved in financial reporting — ERP, billing, POS, payment processing. The scoping exercise involves IT, finance, and internal audit working together."
+    },
+    "scenario_format": {
+      "question": "Ferguson's SOX auditor asks whether the WAN routers at 1,700 branches are in scope. Branch routers carry POS transaction data to the ERP system. Are they in scope?",
+      "options": [
+        { "text": "No — only servers are in scope for SOX.", "correct": false },
+        { "text": "Yes — the WAN routers carry POS/financial transaction data to the ERP system, making them part of the financial reporting infrastructure.", "correct": true },
+        { "text": "Only if the routers cost more than $5,000.", "correct": false },
+        { "text": "Only the DC core routers, not branch routers.", "correct": false }
+      ],
+      "explanation": "Any network device that **transports, processes, or protects** financial data is in SOX scope. Branch WAN routers carry **POS transaction data** to the ERP — they are clearly in scope. This means change management, access controls, and audit trails must be enforced on **all 1,700 branch routers**, not just DC infrastructure."
+    },
+    "rule_format": {
+      "statement": "SOX scoping: a network device is in scope if it **supports, processes, or protects** financial reporting systems. For a distributor like Ferguson, WAN routers carrying **POS data** to the ERP are in scope."
+    }
+  },
+  {
+    "concept_id": "sox_q06",
+    "topic": "SOX ITGC",
+    "question_text": "SOX evidence retention and documentation",
+    "quiz_format": {
+      "question": "How long must SOX-related audit evidence typically be retained?",
+      "options": [
+        { "text": "30 days.", "correct": false },
+        { "text": "At minimum 7 years, per SEC requirements under the Sarbanes-Oxley Act.", "correct": true },
+        { "text": "1 year.", "correct": false },
+        { "text": "Until the next audit cycle.", "correct": false }
+      ],
+      "explanation": "The SEC requires **7-year retention** for audit workpapers and supporting documentation under SOX Section 802. This includes change tickets, access review evidence, configuration archives, and logs. Organizations must ensure that **TACACS+ logs, syslog archives, and change management records** are retained for this period with appropriate integrity protections."
+    },
+    "scenario_format": {
+      "question": "Ferguson's syslog server retains network device logs for 90 days before purging. Is this sufficient for SOX compliance?",
+      "options": [
+        { "text": "Yes — 90 days exceeds the typical audit period.", "correct": false },
+        { "text": "No — SOX requires 7-year retention of audit evidence. Logs must be archived to long-term storage before purging.", "correct": true },
+        { "text": "Yes — logs are not considered audit evidence.", "correct": false },
+        { "text": "No — logs must be kept for 10 years.", "correct": false }
+      ],
+      "explanation": "SOX Section 802 mandates **7-year retention** of audit-related documentation. Network logs that serve as audit evidence (configuration changes, access events, security incidents) must be archived to **long-term storage** (e.g., WORM storage, archived SIEM) before the syslog server purges them."
+    },
+    "rule_format": {
+      "statement": "SOX requires **7-year retention** of audit evidence. Ensure TACACS+ logs, syslog, change tickets, and config archives are **archived to long-term storage** — not just kept on a 90-day rolling syslog server."
+    }
+  },
+  {
+    "concept_id": "pci_q01",
+    "topic": "PCI DSS",
+    "question_text": "PCI DSS CDE scope and network segmentation",
+    "quiz_format": {
+      "question": "What defines the Cardholder Data Environment (CDE) in PCI DSS?",
+      "options": [
+        { "text": "Any system that stores, processes, or transmits cardholder data, plus any system directly connected to it.", "correct": true },
+        { "text": "Only the POS terminal itself.", "correct": false },
+        { "text": "The entire corporate network.", "correct": false },
+        { "text": "Only servers that store credit card numbers.", "correct": false }
+      ],
+      "explanation": "The **CDE** includes all systems that store, process, or transmit cardholder data, plus any systems **connected to** or that could impact the security of the CDE. **Network segmentation** is not a PCI requirement, but without it, the entire network is in scope. Proper segmentation with firewalls/ACLs reduces scope to only the CDE segment."
+    },
+    "scenario_format": {
+      "question": "Ferguson's 1,700 branches have POS terminals on the same VLAN as general workstations. What is the PCI scope impact?",
+      "options": [
+        { "text": "Only the POS terminals are in scope.", "correct": false },
+        { "text": "Without network segmentation, the entire branch network (POS, workstations, printers, everything on the flat VLAN) is in PCI scope.", "correct": true },
+        { "text": "Scope is determined by the acquiring bank, not network design.", "correct": false },
+        { "text": "Only the WAN router is in scope.", "correct": false }
+      ],
+      "explanation": "Without **network segmentation**, any system that can communicate with the POS environment is considered connected to the CDE and falls **in scope**. Segmenting POS into a dedicated VLAN with **firewall/ACL controls** between it and the general network reduces PCI scope to only the POS VLAN and its supporting infrastructure."
+    },
+    "rule_format": {
+      "statement": "The **CDE** = systems that store/process/transmit cardholder data + connected systems. Without **network segmentation**, the entire network is in PCI scope — segment POS into a dedicated VLAN with strict firewall controls."
+    }
+  },
+  {
+    "concept_id": "pci_q02",
+    "topic": "PCI DSS",
+    "question_text": "PCI DSS Requirement 1 — firewall and network controls",
+    "quiz_format": {
+      "question": "What does PCI DSS Requirement 1 mandate?",
+      "options": [
+        { "text": "Encryption of cardholder data at rest.", "correct": false },
+        { "text": "Installation and maintenance of network security controls (firewalls, ACLs) to protect the CDE, including documented rulesets reviewed at least every six months.", "correct": true },
+        { "text": "Annual penetration testing.", "correct": false },
+        { "text": "Employee security awareness training.", "correct": false }
+      ],
+      "explanation": "**Requirement 1** focuses on **network security controls** — firewalls, router ACLs, and segmentation. It mandates: a current network diagram, documented firewall rules with business justification, **review of rules at least every six months**, restriction of inbound/outbound traffic to only what is necessary, and no direct public access to the CDE."
+    },
+    "scenario_format": {
+      "question": "A PCI QSA auditing Ferguson asks for evidence that branch firewall rules are reviewed regularly. The last review was 14 months ago. What is the finding?",
+      "options": [
+        { "text": "No finding — annual review is sufficient.", "correct": false },
+        { "text": "Non-compliance with Requirement 1 — firewall rules must be reviewed at least every six months.", "correct": true },
+        { "text": "No finding — reviews are only needed when rules change.", "correct": false },
+        { "text": "Minor finding — reviews are recommended but not required.", "correct": false }
+      ],
+      "explanation": "PCI DSS Requirement 1 mandates firewall rule review **at least every six months**. A 14-month gap is a **compliance finding**. With 1,700 branches, Ferguson should implement a **structured semi-annual review process** using firewall management tools to document the review, including business justification for each rule."
+    },
+    "rule_format": {
+      "statement": "PCI Requirement 1: firewall/ACL rules must be **reviewed at least every six months** with documented business justification for each rule. No exceptions — a lapsed review is a compliance finding."
+    }
+  },
+  {
+    "concept_id": "pci_q03",
+    "topic": "PCI DSS",
+    "question_text": "PCI DSS Requirement 6 — secure systems and software",
+    "quiz_format": {
+      "question": "What does PCI DSS Requirement 6 require regarding system and network device patching?",
+      "options": [
+        { "text": "Patches are only needed for POS terminals.", "correct": false },
+        { "text": "Critical security patches must be installed within one month of release on all in-scope systems.", "correct": true },
+        { "text": "Patches are optional if a compensating control exists.", "correct": false },
+        { "text": "Only operating system patches are required, not network device firmware.", "correct": false }
+      ],
+      "explanation": "**Requirement 6** mandates that all in-scope systems (including network devices like routers, switches, and firewalls) have **critical security patches installed within 30 days** of release. This includes IOS/NX-OS upgrades for known CVEs. A formal **patch management process** with risk assessment and testing is required."
+    },
+    "scenario_format": {
+      "question": "Cisco releases a critical IOS vulnerability affecting Ferguson's branch routers (which are in PCI scope). What is the PCI-mandated response timeline?",
+      "options": [
+        { "text": "Patch within the next annual maintenance cycle.", "correct": false },
+        { "text": "Evaluate and install the patch within 30 days of release, with a documented risk assessment if deferral is necessary.", "correct": true },
+        { "text": "Wait for the vendor to auto-update the devices.", "correct": false },
+        { "text": "No action needed if the firewall is protecting the routers.", "correct": false }
+      ],
+      "explanation": "PCI Requirement 6 requires **critical patches within 30 days**. For Ferguson's 1,700 branch routers, this requires a robust **patch management process**: risk assessment, testing on a pilot set of branches, phased rollout, and documentation. If the patch cannot be applied in 30 days, a **compensating control** and risk acceptance must be documented."
+    },
+    "rule_format": {
+      "statement": "PCI Requirement 6: **critical patches within 30 days** on all in-scope systems, including network devices. Document risk assessments and compensating controls for any deferrals."
+    }
+  },
+  {
+    "concept_id": "pci_q04",
+    "topic": "PCI DSS",
+    "question_text": "PCI DSS wireless security requirements",
+    "quiz_format": {
+      "question": "What does PCI DSS require regarding wireless networks in or near the CDE?",
+      "options": [
+        { "text": "Wireless is prohibited near the CDE.", "correct": false },
+        { "text": "Wireless networks must use strong encryption (WPA2/WPA3 Enterprise minimum), rogue AP detection must be performed quarterly, and wireless must be segmented from the CDE.", "correct": true },
+        { "text": "Only WEP encryption is required.", "correct": false },
+        { "text": "Wireless is exempt from PCI requirements.", "correct": false }
+      ],
+      "explanation": "PCI requires **WPA2 or WPA3 Enterprise** (AES encryption, 802.1X authentication) for any wireless network connected to the CDE. **Quarterly rogue AP scans** (or continuous wireless IDS) must detect unauthorized access points. The wireless network should be **segmented** from the CDE unless there is a business need for direct connectivity."
+    },
+    "scenario_format": {
+      "question": "A Ferguson branch has a guest Wi-Fi network using WPA2-PSK on the same switch as the POS VLAN. What PCI issues exist?",
+      "options": [
+        { "text": "None — WPA2 satisfies the encryption requirement.", "correct": false },
+        { "text": "WPA2-PSK (pre-shared key) does not meet enterprise authentication requirements, and the guest wireless must be segmented from the POS/CDE network.", "correct": true },
+        { "text": "Guest wireless is exempt from PCI.", "correct": false },
+        { "text": "The only issue is that the SSID should be hidden.", "correct": false }
+      ],
+      "explanation": "Two issues: **WPA2-PSK** lacks individual authentication (a shared password can be compromised and shared) — PCI requires **Enterprise (802.1X)** for networks connected to or near the CDE. Second, the guest wireless and POS must be on **segmented networks** with firewall controls between them to prevent guest access to the CDE."
+    },
+    "rule_format": {
+      "statement": "PCI wireless: **WPA2/WPA3 Enterprise** (802.1X) minimum, **quarterly rogue AP scans**, and strict **segmentation** between wireless and POS/CDE networks. PSK is insufficient for CDE-connected wireless."
+    }
+  },
+  {
+    "concept_id": "pci_q05",
+    "topic": "PCI DSS",
+    "question_text": "PCI DSS POS network security",
+    "quiz_format": {
+      "question": "What network security controls are specifically important for protecting POS systems under PCI DSS?",
+      "options": [
+        { "text": "Only physical security of the POS terminal.", "correct": false },
+        { "text": "Network segmentation of POS into a dedicated VLAN, end-to-end encryption (P2PE) of card data, ACLs restricting POS traffic to only required destinations, and monitoring of POS network traffic.", "correct": true },
+        { "text": "Only antivirus on the POS terminal.", "correct": false },
+        { "text": "Monthly reboots of POS terminals.", "correct": false }
+      ],
+      "explanation": "POS security requires multiple layers: **network segmentation** (dedicated VLAN), **point-to-point encryption (P2PE)** from the card reader to the processor, **ACLs** that restrict POS communication to only the payment processor and management systems, and **network monitoring/IDS** to detect anomalous traffic from POS endpoints."
+    },
+    "scenario_format": {
+      "question": "Ferguson's POS terminals at 1,700 branches communicate with the payment processor over the branch WAN. What network controls should protect this traffic?",
+      "options": [
+        { "text": "Only ensure the WAN link is encrypted.", "correct": false },
+        { "text": "Segment POS into a dedicated VLAN, apply ACLs allowing POS traffic only to the payment processor and management server, encrypt card data end-to-end (P2PE), and monitor POS network traffic for anomalies.", "correct": true },
+        { "text": "Place POS on the same VLAN as other branch devices for simplicity.", "correct": false },
+        { "text": "Only use a VPN for POS traffic.", "correct": false }
+      ],
+      "explanation": "**Defense in depth** for POS: a dedicated VLAN prevents lateral movement, **ACLs** ensure POS terminals can only reach the payment processor (not the internet or other subnets), **P2PE** encrypts card data from the terminal to the processor, and **monitoring** detects compromised terminals phoning home to command-and-control servers."
+    },
+    "rule_format": {
+      "statement": "POS network security = **dedicated VLAN** + **restrictive ACLs** (only payment processor + management) + **P2PE encryption** + **traffic monitoring/IDS** — defense in depth at every Ferguson branch."
+    }
+  },
+  {
+    "concept_id": "pci_q06",
+    "topic": "PCI DSS",
+    "question_text": "PCI DSS network diagram and data flow documentation",
+    "quiz_format": {
+      "question": "What documentation does PCI DSS require regarding the network architecture?",
+      "options": [
+        { "text": "Only a physical wiring diagram.", "correct": false },
+        { "text": "A current network diagram showing all connections to the CDE, a cardholder data flow diagram, and documentation of all network security controls.", "correct": true },
+        { "text": "Only a list of IP addresses.", "correct": false },
+        { "text": "A vendor support contract for each device.", "correct": false }
+      ],
+      "explanation": "PCI DSS requires a **current network diagram** showing all connections between the CDE and other networks, a **cardholder data flow diagram** showing how card data moves through systems, and documentation of **all security controls** (firewalls, ACLs, encryption). These must be **reviewed and updated** whenever the environment changes."
+    },
+    "scenario_format": {
+      "question": "During a PCI audit, the QSA asks Ferguson for a data flow diagram showing how card data moves from the branch POS terminal to the payment processor. The network team has a topology diagram but no data flow document. What is the finding?",
+      "options": [
+        { "text": "No finding — a topology diagram is sufficient.", "correct": false },
+        { "text": "Non-compliance — PCI requires a specific cardholder data flow diagram in addition to the network topology diagram, showing every system that touches card data.", "correct": true },
+        { "text": "Minor finding — data flows are optional.", "correct": false },
+        { "text": "No finding — the payment processor maintains this document.", "correct": false }
+      ],
+      "explanation": "PCI requires **both** a network diagram and a **cardholder data flow diagram**. The data flow shows the path of card data: POS terminal, branch switch, WAN router, DC firewall, payment gateway, processor. Every system in this flow is in scope. Without this document, the QSA cannot validate that all in-scope systems are properly controlled."
+    },
+    "rule_format": {
+      "statement": "PCI requires both a **network topology diagram** and a **cardholder data flow diagram** showing every system that touches card data. Both must be **current** — update them whenever the environment changes."
+    }
+  }
+]

@@ -1,0 +1,479 @@
+/* ─── Wrapper & Card Shell ─────────────────────────────────────────────────── */
+
+.study-card-wrapper {
+  height: 100vh;
+  width: 100%;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  position: relative;
+}
+
+.study-card {
+  width: 100%;
+  max-width: 450px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(22, 10, 50, 0.88));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7),
+              inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              opacity 0.35s ease;
+}
+
+.study-card-wrapper.active .study-card {
+  transform: scale(1);
+  opacity: 1;
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7),
+              0 0 0 1px rgba(139, 92, 246, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.study-card-wrapper:not(.active) .study-card {
+  transform: scale(0.95);
+  opacity: 0.55;
+}
+
+/* ─── Header ───────────────────────────────────────────────────────────────── */
+
+.card-header {
+  padding: 0.75rem 1.5rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.topic-badge {
+  background: rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  max-width: 65%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px rgba(196, 181, 253, 0.3);
+}
+
+.mastery-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.mastery-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mastery-pct {
+  color: #94a3b8;
+}
+
+/* ─── Shared card-content ──────────────────────────────────────────────────── */
+
+.card-content {
+  flex: 1;
+  padding: 0.5rem 1.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.card-content::-webkit-scrollbar { display: none; }
+
+.card-error {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f87171;
+  font-size: 0.85rem;
+  padding: 2rem;
+}
+
+/* ─── Format badge & hook ──────────────────────────────────────────────────── */
+
+.format-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 0.25rem 0.65rem;
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+  /* Subtle glow matching the badge color */
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.hook-line {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-style: italic;
+  margin-bottom: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* ─── Quiz / Scenario layout ───────────────────────────────────────────────── */
+
+.quiz-content {
+  gap: 0;
+}
+
+.question-text {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #f1f5f9;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.option-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  transition: all 0.18s ease;
+  width: 100%;
+}
+
+.option-btn:hover:not(.correct):not(.wrong):not(.dimmed) {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: #e2e8f0;
+  transform: translateX(2px);
+}
+
+/* Correct: electric blue — safe for red-green color blindness */
+.option-btn.correct {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.55);
+  color: #93c5fd;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+}
+
+/* Wrong: hot orange — distinguishable from blue by all color blind types */
+.option-btn.wrong {
+  background: rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.55);
+  color: #fdba74;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
+}
+
+.option-btn.dimmed {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.opt-letter {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #475569;
+  min-width: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+/* Symbol + color reinforces the answer — doesn't rely on color alone */
+.option-btn.correct .opt-letter { color: #3b82f6; }
+.option-btn.wrong   .opt-letter { color: #f97316; }
+
+.opt-text {
+  flex: 1;
+}
+
+/* ─── Flip bar (revealed state) ────────────────────────────────────────────── */
+
+.flip-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  flex-shrink: 0;
+}
+
+.flip-btn {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 10px;
+  color: #60a5fa;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.flip-btn:hover {
+  background: rgba(59, 130, 246, 0.25);
+  transform: translateX(2px);
+}
+
+.skip-hint {
+  font-size: 0.72rem;
+  color: #334155;
+  font-style: italic;
+}
+
+/* ─── Explanation face ─────────────────────────────────────────────────────── */
+
+.exp-face {
+  animation: slideUp 0.22s ease;
+  gap: 0.9rem;
+}
+
+.exp-back-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.exp-back-btn:hover { color: #94a3b8; }
+
+.exp-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.exp-verdict.verdict-correct {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.exp-verdict.verdict-wrong {
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+
+.verdict-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.verdict-correct .verdict-label { color: #60a5fa; }
+.verdict-wrong   .verdict-label { color: #fb923c; }
+
+.verdict-option {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.verdict-right {
+  font-size: 0.82rem;
+  color: #60a5fa;
+  line-height: 1.4;
+  margin-top: 0.15rem;
+}
+
+.exp-body {
+  flex: 1;
+  background: rgba(10, 15, 35, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.exp-body::-webkit-scrollbar { display: none; }
+
+.exp-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #3b82f6;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.exp-text {
+  font-size: 0.83rem;
+  line-height: 1.65;
+  color: #94a3b8;
+}
+
+.exp-scroll-hint {
+  font-size: 0.7rem;
+  color: #1e293b;
+  text-align: center;
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+.exp-page-indicator {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.5rem;
+}
+
+.exp-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.exp-dot.active {
+  background: rgba(59, 130, 246, 0.8);
+  transform: scale(1.3);
+}
+
+/* ─── Rule layout ──────────────────────────────────────────────────────────── */
+
+.rule-content {
+  justify-content: center;
+}
+
+.mastery-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 20px;
+  padding: 0.2rem 0.65rem;
+  align-self: flex-start;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;
+}
+
+.rule-statement {
+  border-left: 3px solid;
+  border-image: linear-gradient(180deg, #a855f7, #3b82f6) 1;
+  padding-left: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.rule-statement p {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #f8fafc;
+  text-shadow: 0 0 30px rgba(168, 85, 247, 0.15);
+}
+
+.rule-source {
+  font-size: 0.75rem;
+  color: #1e293b;
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+/* ─── Highlighted text ─────────────────────────────────────────────────────── */
+
+.highlight {
+  color: #22d3ee;
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.45);
+}
+
+/* ─── Action buttons ───────────────────────────────────────────────────────── */
+
+.card-actions {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.action-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.action-btn:hover {
+  transform: scale(1.15);
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.action-btn.liked {
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.4);
+}
+
+.action-btn.saved {
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

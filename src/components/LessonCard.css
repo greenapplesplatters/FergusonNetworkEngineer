@@ -1,0 +1,225 @@
+/* ── Container ── */
+.lc-card {
+  perspective: 1200px;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lc-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.45, 0, 0.15, 1);
+}
+
+.lc-flipped .lc-inner {
+  transform: rotateY(180deg);
+}
+
+/* ── Shared face ── */
+.lc-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── FRONT ── */
+.lc-front {
+  background: #0d0d0f;
+  color: #fff;
+  padding: 28px 24px 24px;
+  justify-content: flex-end;
+}
+
+.lc-front-glow {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  opacity: 0.18;
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.lc-topic-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 16px;
+  align-self: flex-start;
+}
+
+.lc-headline {
+  font-size: clamp(1.25rem, 4vw, 1.65rem);
+  font-weight: 800;
+  line-height: 1.25;
+  color: #fff;
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.lc-subheadline {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 28px;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.lc-tap-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.04em;
+}
+
+.lc-tap-arrow {
+  animation: lc-bounce 1.6s ease-in-out infinite;
+}
+
+@keyframes lc-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
+/* ── BACK ── */
+.lc-back {
+  background: #fafafa;
+  color: #111;
+  padding: 0 24px 24px;
+  justify-content: space-between;
+  transform: rotateY(180deg);
+}
+
+.lc-back-accent {
+  height: 6px;
+  width: 100%;
+  flex-shrink: 0;
+  border-radius: 20px 20px 0 0;
+}
+
+.lc-badge-back {
+  margin-top: 18px;
+  margin-bottom: 12px;
+}
+
+.lc-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.lc-page-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111;
+  margin: 0;
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.lc-page-body {
+  font-size: 0.97rem;
+  color: #333;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── Page navigation ── */
+.lc-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 0 4px;
+}
+
+.lc-nav-btn {
+  background: none;
+  border: 1.5px solid #ddd;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.lc-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.lc-nav-btn:not(:disabled):hover {
+  border-color: #999;
+  color: #111;
+}
+
+.lc-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.lc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ddd;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.lc-dot-active {
+  transform: scale(1.2);
+}
+
+/* ── Back button ── */
+.lc-back-btn {
+  background: none;
+  border: none;
+  font-size: 0.82rem;
+  color: #aaa;
+  cursor: pointer;
+  padding: 8px 0 0;
+  align-self: flex-start;
+  letter-spacing: 0.02em;
+  transition: color 0.15s;
+}
+
+.lc-back-btn:hover {
+  color: #555;
+}
