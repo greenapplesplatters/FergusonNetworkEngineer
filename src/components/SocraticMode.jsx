@@ -3,15 +3,16 @@ import lessons from '../data/lessons.json';
 import './SocraticMode.css';
 
 const TOPIC_COLORS = {
-  'BGP':              '#e74c3c',
-  'OSPF':             '#2980b9',
-  'DMVPN':            '#e67e22',
-  'MPLS':             '#27ae60',
-  'QoS':              '#8e44ad',
-  'Cisco Nexus':      '#c0392b',
-  'Versa SD-WAN':     '#1a5276',
-  'SOX ITGC':         '#16a085',
-  'PCI DSS':          '#6c3483',
+  'BGP':                               '#e74c3c',
+  'OSPF':                              '#2980b9',
+  'DMVPN':                             '#e67e22',
+  'MPLS':                              '#27ae60',
+  'QoS':                               '#8e44ad',
+  'Cisco Nexus & Data Center Switching': '#c0392b',
+  'Versa SD-WAN':                      '#1a5276',
+  'SOX ITGC Compliance':               '#16a085',
+  'PCI DSS Compliance':                '#6c3483',
+  'Spanning Tree Protocol':            '#0e6655',
 };
 
 const PERSONALITIES = [
@@ -73,6 +74,7 @@ const SESSION_PREFIX = 'socratic_session_';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 const SESSION_MAX_MESSAGES = 76; // server MAX_HISTORY_LENGTH is 80; leave a 4-message buffer
 const SUMMARIZE_THRESHOLD = 50;
+const CURRICULUM_KEY = 'socratic_curriculum_index';
 
 function getSessionKey(t) {
   return SESSION_PREFIX + t.toLowerCase().replace(/\s+/g, '_');
@@ -100,6 +102,17 @@ function loadSession(t) {
 
 function clearSession(t) {
   localStorage.removeItem(getSessionKey(t));
+}
+
+function getCurriculumIndex() {
+  try {
+    const val = localStorage.getItem(CURRICULUM_KEY);
+    return val !== null ? Math.max(0, parseInt(val, 10)) : 0;
+  } catch { return 0; }
+}
+
+function saveCurriculumIndex(idx) {
+  try { localStorage.setItem(CURRICULUM_KEY, String(idx)); } catch {}
 }
 
 function hasSession(t) {
@@ -150,6 +163,7 @@ export default function SocraticMode({ onExit }) {
   const [pendingResume, setPendingResume] = useState(null);
   const strikesRef = useRef(0);
   const summaryRef = useRef(null);
+  const manualOverrideRef = useRef(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -159,6 +173,19 @@ export default function SocraticMode({ onExit }) {
       setTerminated(true);
     }
   }, []);
+
+  // Auto-advance to curriculum topic after personality is selected
+  useEffect(() => {
+    if (!personality) {
+      manualOverrideRef.current = false;
+      return;
+    }
+    if (!topic && !manualOverrideRef.current) {
+      const idx = getCurriculumIndex();
+      const safeIdx = Math.min(Math.max(0, idx), ALL_TOPICS.length - 1);
+      setTopic(ALL_TOPICS[safeIdx]);
+    }
+  }, [personality]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -332,9 +359,22 @@ export default function SocraticMode({ onExit }) {
   }
 
   function handleChangeTopic() {
+    manualOverrideRef.current = true;
+    summaryRef.current = null;
     setTopic(null);
     setMessages([]);
     setError(null);
+  }
+
+  function handleNextTopic() {
+    const nextIdx = (ALL_TOPICS.indexOf(topic) + 1) % ALL_TOPICS.length;
+    saveCurriculumIndex(nextIdx);
+    clearSession(topic);
+    summaryRef.current = null;
+    manualOverrideRef.current = false;
+    setMessages([]);
+    setError(null);
+    setTopic(ALL_TOPICS[nextIdx]);
   }
 
   const activePersonality = PERSONALITIES.find(p => p.id === (personality || 'socratic'));
@@ -435,7 +475,11 @@ export default function SocraticMode({ onExit }) {
               key={t}
               className="socratic-topic-btn"
               style={{ '--accent': TOPIC_COLORS[t] || '#8b5cf6' }}
-              onClick={() => setTopic(t)}
+              onClick={() => {
+                saveCurriculumIndex(ALL_TOPICS.indexOf(t));
+                manualOverrideRef.current = false;
+                setTopic(t);
+              }}
             >
               <span className="socratic-topic-dot" style={{ background: TOPIC_COLORS[t] || '#8b5cf6' }} />
               {t}
@@ -463,8 +507,11 @@ export default function SocraticMode({ onExit }) {
           <button className="socratic-topic-pill" style={{ background: accentColor }} onClick={handleChangeTopic}>
             {topic} &darr;
           </button>
+          <span style={{ fontSize: '0.7rem', opacity: 0.55 }}>{ALL_TOPICS.indexOf(topic) + 1} / {ALL_TOPICS.length}</span>
         </div>
-        <div style={{ width: 60 }} />
+        <button className="socratic-exit-btn" onClick={handleNextTopic} disabled={streaming}>
+          Next &rarr;
+        </button>
       </div>
 
       {/* Messages */}
