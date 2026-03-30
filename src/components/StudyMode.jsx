@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import LessonCard from './LessonCard';
 import lessons from '../data/lessons.json';
 import { loadMastery } from '../utils/mastery.js';
@@ -16,6 +16,37 @@ function shuffleArr(arr) {
 export default function StudyMode({ onExit }) {
   const [activeTopic, setActiveTopic] = useState('All');
   const [shuffled, setShuffled] = useState(false);
+
+  const chipBarRef = useRef(null);
+  const dragState = useRef({ dragging: false, startX: 0, scrollLeft: 0, moved: false });
+
+  function onChipBarMouseDown(e) {
+    const bar = chipBarRef.current;
+    if (!bar) return;
+    dragState.current = { dragging: true, startX: e.pageX - bar.offsetLeft, scrollLeft: bar.scrollLeft, moved: false };
+    bar.style.cursor = 'grabbing';
+  }
+
+  function onChipBarMouseMove(e) {
+    const ds = dragState.current;
+    if (!ds.dragging) return;
+    e.preventDefault();
+    const bar = chipBarRef.current;
+    const x = e.pageX - bar.offsetLeft;
+    const delta = x - ds.startX;
+    if (Math.abs(delta) > 4) ds.moved = true;
+    bar.scrollLeft = ds.scrollLeft - delta;
+  }
+
+  function onChipBarMouseUp() {
+    dragState.current.dragging = false;
+    if (chipBarRef.current) chipBarRef.current.style.cursor = '';
+  }
+
+  function onChipClick(e, topic) {
+    if (dragState.current.moved) { e.preventDefault(); return; }
+    setActiveTopic(topic);
+  }
 
   // Load mastery data to prioritize weak areas
   const masteryData = useMemo(() => loadMastery(), []);
@@ -60,12 +91,19 @@ export default function StudyMode({ onExit }) {
       </div>
 
       {/* Topic filter chip bar */}
-      <div className="study-mode-chip-bar">
+      <div
+        className="study-mode-chip-bar"
+        ref={chipBarRef}
+        onMouseDown={onChipBarMouseDown}
+        onMouseMove={onChipBarMouseMove}
+        onMouseUp={onChipBarMouseUp}
+        onMouseLeave={onChipBarMouseUp}
+      >
         {topics.map(t => (
           <button
             key={t}
             className={`study-mode-chip ${activeTopic === t ? 'study-mode-chip-active' : ''}`}
-            onClick={() => setActiveTopic(t)}
+            onClick={(e) => onChipClick(e, t)}
           >
             {t}
           </button>
@@ -73,7 +111,7 @@ export default function StudyMode({ onExit }) {
         <span className="study-mode-chip-divider" />
         <button
           className={`study-mode-chip study-mode-chip-shuffle ${shuffled ? 'study-mode-chip-active' : ''}`}
-          onClick={() => setShuffled(s => !s)}
+          onClick={() => { if (!dragState.current.moved) setShuffled(s => !s); }}
         >
           &#x1f500; Shuffle
         </button>
